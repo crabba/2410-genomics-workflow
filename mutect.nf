@@ -1,25 +1,28 @@
-#! /usr/bin/env nextflow
-
-nextflow.enable_dsl = 2
-
-params.fastq1 = 'foo_1.fastq.gz'
-params.fastq2 = 'foo_2.fastq.gz'
+params.fastq = ''
+// params.fastq2 = 'foo_2.fastq.gz'
+params.outputdir = 'out'
+params.contaminants = ''
+params.limits = ''
 
 container_fastqc = "quay.io/biocontainers/fastqc:0.12.1--hdfd78af_0"
 
 process fastqc {
-    container container_fastqc
+    container "quay.io/biocontainers/fastqc:0.12.1--hdfd78af_0"
     input:
         path infile
-    output:
-        path outfile
 
+    script:
     """
-    fastqc --version
+    mkdir ${params.outputdir}
+    echo "infile is ${infile}"
+    fastqc \
+    --outdir ${params.outputdir} \
+    ${infile}
     """
 }
 
 workflow {
-    def input_ch = Channel.fromPath(params.fastq1)
-    fastqc(input_ch)
+    def fastq_ch = Channel.fromPath(params.fastq)
+//    def fastq_ch = Channel.fromPath("/home/ec2-user/H06HDADXX130110.1.ATCACGAT.20k_reads_*.fastq.gz")
+    fastqc(fastq_ch)
 }
