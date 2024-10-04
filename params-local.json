@@ -3,6 +3,9 @@
     "steps": {
 	"fastqc": {
 	    "container": "quay.io/biocontainers/fastqc:0.12.1--hdfd78af_0"
+	},
+	"fastq_to_bam": {
+	    "container": "myubuntu:0.3"
 	}
     }
 }
