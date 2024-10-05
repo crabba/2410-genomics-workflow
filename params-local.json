@@ -2,10 +2,54 @@
     "outputdir": "outt",
     "steps": {
 	"fastqc": {
-	    "container": "quay.io/biocontainers/fastqc:0.12.1--hdfd78af_0"
+	    "container": "quay.io/biocontainers/fastqc:0.12.1--hdfd78af_0",
+	    "cpus": "2",
+	    "memory": "4 GB"
 	},
 	"fastq_to_bam": {
-	    "container": "myubuntu:0.3"
+	    "container": "myubuntu:0.3",
+	    "cpus": "2",
+	    "memory": "4 GB"
+	},
+	"sort_bam": {
+	    "container": "myubuntu:0.3",
+	    "cpus": "2",
+	    "memory": "4 GB"
+	},
+	"sam_to_fastq": {
+	    "container": "broadinstitute/gatk:latest",
+	    "cpus": "2",
+	    "memory": "4 GB"
+	},
+	"bwa_mem2": {
+	    "container": "szarate/bwa-mem2:v2.2.1",
+	    "cpus": "2",
+	    "memory": "4 GB"
+	},
+	"merge_bam_alignment": {
+	    "container": "broadinstitute/gatk:latest",
+	    "cpus": "2",
+	    "memory": "4 GB"
+	},
+	"group_reads_by_umi": {
+	    "container": "myubuntu:0.3",
+	    "cpus": "2",
+	    "memory": "4 GB"
+	},
+	"call_molecular_consensus_reads": {
+	    "container": "myubuntu:0.3",
+	    "cpus": "2",
+	    "memory": "4 GB"
+	},
+	"filter_consensus_reads": {
+	    "container": "myubuntu:0.3",
+	    "cpus": "2",
+	    "memory": "4 GB"
+	},
+	"cutadapt": {
+	    "container": "cutadapt:latest",
+	    "cpus": "2",
+	    "memory": "4 GB"
 	}
     }
 }
