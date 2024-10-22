@@ -8,6 +8,7 @@ vals_03 = params.steps.fastqc_03.parameters
 vals_04 = params.steps.fastq_to_bam_04.parameters
 vals_05 = params.steps.fastqc_05.parameters
 vals_07 = params.steps.sam_to_fastq_07.parameters
+vals_08 = params.steps.bwa_mem2_08.parameters
 
 process fastqc_03 {
     container params.steps.fastqc_03.container
@@ -78,7 +79,7 @@ process fastqc_05 {
     input:
     tuple val(sample_id), path(reads)
 
-    script:
+    shell:
     """
     mkdir ${params.outputdir}
     echo "sample_id ${sample_id}, reads ${reads}"
@@ -100,7 +101,7 @@ process sort_bam_06 {
     output:
     path 'sort_bam_out.bam', emit: out_bam
 
-    script:
+    shell:
     """
     ${params.cmd.fgbio} \
     SortBam \
@@ -139,17 +140,18 @@ process sam_to_fastq_07 {
     --RG_TAG !{vals_07['RG_TAG']} \
     --SECOND_END_FASTQ !{vals_07['SECOND_END_FASTQ']}
     """
-//    --CLIPPING_ACTION !{vals_07['CLIPPING_ACTION']} \
-//    --CLIPPING_ATTRIBUTE !{vals_07['CLIPPING_ATTRIBUTE']} \
-//    --COMPRESS_OUTPUTS_PER_RG !{vals_07['COMPRESS_OUTPUTS_PER_RG']} \
-//    --OUTPUT_PER_RG !{vals_07['OUTPUT_PER_RG']} \
+    // Parameters requiring valid values
+    //    --CLIPPING_ACTION !{vals_07['CLIPPING_ACTION']} \
+    //    --CLIPPING_ATTRIBUTE !{vals_07['CLIPPING_ATTRIBUTE']} \
+    //    --COMPRESS_OUTPUTS_PER_RG !{vals_07['COMPRESS_OUTPUTS_PER_RG']} \
+    //    --OUTPUT_PER_RG !{vals_07['OUTPUT_PER_RG']} \
 
 }
 
 process bwa_mem2_08 {
-    container params.steps.bwa_mem2.container
-    cpus params.steps.bwa_mem2.cpus
-    memory params.steps.bwa_mem2.memory
+    container params.steps.bwa_mem2_08.container
+    cpus params.steps.bwa_mem2_08.cpus
+    memory params.steps.bwa_mem2_08.memory
 
     input:
     path in_fastq
@@ -157,16 +159,17 @@ process bwa_mem2_08 {
     output:
     path 'bwa_mem2_out.sam', emit: out_sam
     
-    script:
+    shell:
     """
+    echo "bwa_mem2_08: in_fastq ${in_fastq}"
     bwa-mem2 \
     index \
-    ${in_fastq}
+    ${in_fastq[0]} ${in_fastq[1]}
 
     bwa-mem2 \
     mem \
     -o bwa_mem2_out.sam \
-    ${in_fastq}
+    ${in_fastq[0]} ${in_fastq[1]}
 
     """
 }
@@ -278,8 +281,8 @@ workflow {
     def intervals_ch = Channel.fromFile(params.intervals)
     fastqc_03(fastq_pairs_ch)
     // fastq_to_bam_04(fastq_pairs_ch)
-    fastq_to_bam_04(fastq_pairs_ch) | sam_to_fastq_07
-    // fastq_to_bam_04(fastq_pairs_ch) | sam_to_fastq_07 | bwa_mem2_08
+    // fastq_to_bam_04(fastq_pairs_ch) | sam_to_fastq_07
+    fastq_to_bam_04(fastq_pairs_ch) | sam_to_fastq_07 | bwa_mem2_08
     // sort_bam_06(fastq_to_bam.out_bam)
     // merge_bam_alignment_09(bwa_mem2.out_sam, sort_bam.out_bam) | group_reads_by_umi_10 \
     // | call_molecular_consensus_reads_11 | filter_consensus_reads_12 | sam_to_fastq_13 | cutadapt_14
