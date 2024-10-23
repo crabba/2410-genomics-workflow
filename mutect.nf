@@ -7,8 +7,10 @@ params.limits = ''
 vals_03 = params.steps.fastqc_03.parameters
 vals_04 = params.steps.fastq_to_bam_04.parameters
 vals_05 = params.steps.fastqc_05.parameters
+vals_06 = params.steps.sort_bam_06.parameters
 vals_07 = params.steps.sam_to_fastq_07.parameters
 vals_08 = params.steps.bwa_mem2_08.parameters
+vals_09 = params.steps.merge_bam_alignment_09.parameters
 
 process fastqc_03 {
     container params.steps.fastqc_03.container
@@ -46,7 +48,7 @@ process fastq_to_bam_04 {
     tuple val(sample_id), path(reads)
 
     output:
-    path 'fastq_to_bam_out.bam', emit: out_bam
+    path 'fastq_to_bam_out.bam', emit: bam
 
     shell:
     """
@@ -99,14 +101,16 @@ process sort_bam_06 {
     path in_bam
 
     output:
-    path 'sort_bam_out.bam', emit: out_bam
+    path 'sort_bam_out.bam', emit: bam
 
     shell:
     """
     ${params.cmd.fgbio} \
     SortBam \
     --input=${in_bam} \
-    --output=sort_bam_out.bam    
+    --max-records-in-ram=${vals_06['max-records-in-ram']} \
+    --output=sort_bam_out.bam \
+    --sort-order=${vals_06['sort-order']}
     """
 }
 
@@ -119,7 +123,7 @@ process sam_to_fastq_07 {
     path in_bam
 
     output:
-    path 'sam_to_fastq_out_R?.fastq.gz', emit: out_fastq
+    path 'sam_to_fastq_out_R?.fastq.gz', emit: fastq
 
     shell:
     """
@@ -155,39 +159,52 @@ process bwa_mem2_08 {
 
     input:
     path in_fastq
+    path in_ref
 
     output:
-    path 'bwa_mem2_out.sam', emit: out_sam
+    path 'bwa_mem2_out.sam', emit: sam
     
     shell:
     """
     echo "bwa_mem2_08: in_fastq ${in_fastq}"
     bwa-mem2 \
     index \
+    -p Homo_sapiens_assembly19.fasta \
     ${in_fastq[0]} ${in_fastq[1]}
 
     bwa-mem2 \
     mem \
     -o bwa_mem2_out.sam \
+    ${in_ref} \
     ${in_fastq[0]} ${in_fastq[1]}
 
     """
 }
 
 process merge_bam_alignment_09 {
-    container params.steps.merge_bam_alignment.container
-    cpus params.steps.merge_bam_alignment.cpus
-    memory params.steps.merge_bam_alignment.memory
+    container params.steps.merge_bam_alignment_09.container
+    cpus params.steps.merge_bam_alignment_09.cpus
+    memory params.steps.merge_bam_alignment_09.memory
 
     input:
     path aligned_bam
     path unmapped_bam
+    path reference_sequence
+    path reference_index
+    path reference_dict
 
     output:
     path 'merge_bam_alignment_out.bam', emit: out_bam
     
-    script:
+    shell:
     """
+    echo "merge_bam_alignment_09 reference_sequence ${reference_sequence}"
+    ${params.cmd.gatk} \
+    MergeBamAlignment \
+    --ALIGNED_BAM ${aligned_bam} \
+    --OUTPUT merge_bam_alignment_out.bam \
+    --REFERENCE_SEQUENCE ${reference_sequence} \
+    --UNMAPPED_BAM ${unmapped_bam}
     """
 }
 
@@ -278,12 +295,22 @@ process cutadapt_14 {
 
 workflow {
     def fastq_pairs_ch = Channel.fromFilePairs(params.fastq)
-    def intervals_ch = Channel.fromFile(params.intervals)
+    // def merge_bam_alignment_ref_ch = Channel.fromPath(params.steps.merge_bam_alignment_09.parameters.REFERENCE_SEQUENCE)
+    def ref_ch = Channel.fromPath('Homo_sapiens_assembly19.fasta')
+    def ref_idx_ch = Channel.fromPath('Homo_sapiens_assembly19.fasta.fai')
+    def ref_dict_ch = Channel.fromPath('Homo_sapiens_assembly19.dict')
+    
+    // def merge_bam_alignment_ref_ch = Channel.fromFilePairs('Homo_sapiens_assembly19.fasta*')
+    // ref_tuple.view()
+    // def intervals_ch = Channel.fromFile(params.intervals)
+    // println 'merge_bam_alignment_ref_ch is ' + merge_bam_alignment_ref_ch
+
     fastqc_03(fastq_pairs_ch)
-    // fastq_to_bam_04(fastq_pairs_ch)
-    // fastq_to_bam_04(fastq_pairs_ch) | sam_to_fastq_07
-    fastq_to_bam_04(fastq_pairs_ch) | sam_to_fastq_07 | bwa_mem2_08
-    // sort_bam_06(fastq_to_bam.out_bam)
+    fastq_to_bam_04(fastq_pairs_ch) | sam_to_fastq_07
+    bwa_mem2_08(sam_to_fastq_07.out.fastq, ref_ch)
+    sort_bam_06(fastq_to_bam_04.out.bam)
+    // merge_bam_alignment_09(bwa_mem2_08.out.sam, sort_bam_06.out.bam, ref_ch, ref_idx_ch, ref_dict_ch)
+
     // merge_bam_alignment_09(bwa_mem2.out_sam, sort_bam.out_bam) | group_reads_by_umi_10 \
     // | call_molecular_consensus_reads_11 | filter_consensus_reads_12 | sam_to_fastq_13 | cutadapt_14
     // | bwa_mem2 | sort_sam

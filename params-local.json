@@ -3,7 +3,7 @@
 	"fgbio": "java -jar /root/fgbio-2.3.0.jar",
 	"gatk": "java -jar /gatk/gatk.jar"
     },
-    "fastq": "s3://crabba-raas-data/fastq/H06HDADXX130110.1.*_{1,2}.fastq.gz",
+    "fastq": "R{1,2}.fastq.gz",
     "outputdir": "outt",
     "steps": {
 	"fastqc_03": {
@@ -47,7 +47,11 @@
 	"sort_bam_06": {
 	    "container": "myubuntu:0.3",
 	    "cpus": "2",
-	    "memory": "4 GB"
+	    "memory": "4 GB",
+	    "parameters": {
+		"max-records-in-ram": 111111,
+		"sort-order": "Queryname"
+	    }
 	},
 	"sam_to_fastq_07": {
 	    "container": "broadinstitute/gatk:latest",
@@ -81,7 +85,56 @@
 	"merge_bam_alignment_09": {
 	    "container": "broadinstitute/gatk:latest",
 	    "cpus": "2",
-	    "memory": "4 GB"
+	    "memory": "4 GB",
+	    "parameters": {
+		"OUTPUT": "",
+		"REFERENCE_SEQUENCE": "",
+		"UNMAPPED_BAM": "",
+		"ADD_MATE_CIGAR": "",
+		"ADD_PG_TAG_TO_READS": "",
+		"ALIGNED_BAM": "",
+		"ALIGNED_READS_ONLY": "",
+		"ALIGNER_PROPER_PAIR_FLAGS": "",
+		"arguments_file": "",
+		"ATTRIBUTES_TO_REMOVE": "",
+		"ATTRIBUTES_TO_RETAIN": "",
+		"ATTRIBUTES_TO_REVERSE": "",
+		"ATTRIBUTES_TO_REVERSE_COMPLEMENT": "",
+		"CLIP_ADAPTERS": "",
+		"CLIP_OVERLAPPING_READS": "",
+		"COMPRESSION_LEVEL": "",
+		"CREATE_INDEX": "",
+		"CREATE_MD5_FILE": "",
+		"EXPECTED_ORIENTATIONS": "",
+		"HARD_CLIP_OVERLAPPING_READS": "",
+		"INCLUDE_SECONDARY_ALIGNMENTS": "",
+		"IS_BISULFITE_SEQUENCE": "",
+		"JUMP_SIZE": "",
+		"MATCHING_DICTIONARY_TAGS": "",
+		"MAX_INSERTIONS_OR_DELETIONS": "",
+		"MAX_RECORDS_IN_RAM": "",
+		"MIN_UNCLIPPED_BASES": "",
+		"PAIRED_RUN": "",
+		"PRIMARY_ALIGNMENT_STRATEGY": "",
+		"PROGRAM_GROUP_COMMAND_LINE": "",
+		"PROGRAM_GROUP_NAME": "",
+		"PROGRAM_GROUP_VERSION": "",
+		"PROGRAM_RECORD_ID,-PG": "",
+		"QUIET": "",
+		"READ1_ALIGNED_BAM": "",
+		"READ1_TRIM": "",
+		"READ2_ALIGNED_BAM": "",
+		"READ2_TRIM": "",
+		"REFERENCE_SEQUENCE": "Homo_sapiens_assembly38.fasta*",
+		"SORT_ORDER": "",
+		"TMP_DIR": "",
+		"UNMAP_CONTAMINANT_READS": "",
+		"UNMAPPED_READ_STRATEGY": "",
+		"USE_JDK_DEFLATER": "",
+		"USE_JDK_INFLATER": "",
+		"VALIDATION_STRINGENCY": "",
+		"VERBOSITY": "",
+	    }
 	},
 	"group_reads_by_umi_10": {
 	    "container": "myubuntu:0.3",
