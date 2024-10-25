@@ -15,6 +15,7 @@ vals_06 = params.steps.sort_bam_06.parameters
 vals_07 = params.steps.sam_to_fastq_07.parameters
 vals_08 = params.steps.bwa_mem2_08.parameters
 vals_09 = params.steps.merge_bam_alignment_09.parameters
+vals_10 = params.steps.group_reads_by_umi_10.parameters
 
 process fastqc_03 {
     container { ecr_prefix + params.steps.fastqc_03.container }
@@ -226,9 +227,9 @@ process merge_bam_alignment_09 {
 }
 
 process group_reads_by_umi_10 {
-    container { ecr_prefix + params.steps.group_reads_by_umi.container }
-    cpus params.steps.group_reads_by_umi.cpus
-    memory params.steps.group_reads_by_umi.memory
+    container { ecr_prefix + params.steps.group_reads_by_umi_10.container }
+    cpus params.steps.group_reads_by_umi_10.cpus
+    memory params.steps.group_reads_by_umi_10.memory
 
     input:
     path in_bam
@@ -236,9 +237,14 @@ process group_reads_by_umi_10 {
     output:
     path 'group_reads_by_umi_out.bam', emit: out_bam
     
-    script:
-    """
-    """
+    shell:
+    '''
+    !{params.cmd.fgbio} \
+    GroupReadsByUmi \
+    --input=!{in_bam} \
+    --output=group_reads_by_umi_out.bam \
+    --strategy=!{vals_10['strategy']} \
+    '''
 }
 
 process call_molecular_consensus_reads_11 {
