@@ -171,6 +171,11 @@ process bwa_mem2_08 {
     path in_fastq
     path reference_sequence
     path reference_index
+    path reference_bwt
+    path reference_ann
+    path reference_amb
+    path reference_pac
+    path reference_0123
 
     output:
     path 'bwa_mem2_out.sam', emit: sam
@@ -179,17 +184,17 @@ process bwa_mem2_08 {
     '''
     ref_stem=`basename !{reference_sequence}`
     echo "bwa_mem2_08: in_fastq !{in_fastq}, ref_stem $ref_stem"
-    bwa-mem2 \
-    index \
-    -p ${ref_stem} \
-    !{reference_sequence}
 
     bwa-mem2 \
     mem \
     -o bwa_mem2_out.sam \
-    !{reference_sequence}
-    !{in_fastq[0]} ${in_fastq[1]}
+    !{reference_sequence} \
+    !{in_fastq[0]} !{in_fastq[1]}
     '''
+    // bwa-mem2 \
+    // index \
+    // -p ${ref_stem} \
+    // !{reference_sequence}
 }
 
 process merge_bam_alignment_09 {
@@ -307,21 +312,21 @@ process cutadapt_14 {
 
 workflow {
     def fastq_pairs_ch = Channel.fromFilePairs(params.fastq)
-    // def merge_bam_alignment_ref_ch = Channel.fromPath(params.steps.merge_bam_alignment_09.parameters.REFERENCE_SEQUENCE)
-    def ref_ch = Channel.fromPath('Homo_sapiens_assembly19.fasta')
-    def ref_idx_ch = Channel.fromPath('Homo_sapiens_assembly19.fasta.fai')
-    def ref_dict_ch = Channel.fromPath('Homo_sapiens_assembly19.dict')
+    def ref_ch = Channel.fromPath('Homo_sapiens_assembly38.fasta')
+    def ref_idx_ch = Channel.fromPath('Homo_sapiens_assembly38.fasta.fai')
+    def ref_idx_bwt = Channel.fromPath('Homo_sapiens_assembly38.fasta.bwt.2bit.64')
+    def ref_dict_ch = Channel.fromPath('Homo_sapiens_assembly38.dict')
+    def ref_ann = Channel.fromPath('Homo_sapiens_assembly38.fasta.ann')
+    def ref_amb = Channel.fromPath('Homo_sapiens_assembly38.fasta.amb')
+    def ref_pac = Channel.fromPath('Homo_sapiens_assembly38.fasta.pac')
+    def ref_0123 = Channel.fromPath('Homo_sapiens_assembly38.fasta.0123')
     
-    // def merge_bam_alignment_ref_ch = Channel.fromFilePairs('Homo_sapiens_assembly19.fasta*')
-    // ref_tuple.view()
-    // def intervals_ch = Channel.fromFile(params.intervals)
-    // println 'merge_bam_alignment_ref_ch is ' + merge_bam_alignment_ref_ch
 
     fastqc_03(fastq_pairs_ch)
     fastq_to_bam_04(fastq_pairs_ch) | sam_to_fastq_07
-    bwa_mem2_08(sam_to_fastq_07.out.fastq, ref_ch, ref_idx_ch)
+    bwa_mem2_08(sam_to_fastq_07.out.fastq, ref_ch, ref_idx_ch, ref_idx_bwt, ref_ann, ref_amb, ref_pac, ref_0123)
     sort_bam_06(fastq_to_bam_04.out.bam)
-    // merge_bam_alignment_09(bwa_mem2_08.out.sam, sort_bam_06.out.bam, ref_ch, ref_idx_ch, ref_dict_ch)
+    merge_bam_alignment_09(bwa_mem2_08.out.sam, sort_bam_06.out.bam, ref_ch, ref_idx_ch, ref_dict_ch)
 
     // merge_bam_alignment_09(bwa_mem2.out_sam, sort_bam.out_bam) | group_reads_by_umi_10 \
     // | call_molecular_consensus_reads_11 | filter_consensus_reads_12 | sam_to_fastq_13 | cutadapt_14

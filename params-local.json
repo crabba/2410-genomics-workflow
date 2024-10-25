@@ -3,7 +3,7 @@
 	"fgbio": "java -jar /root/fgbio-2.3.0.jar",
 	"gatk": "java -jar /gatk/gatk.jar"
     },
-    "fastq": "R{1,2}.fastq.gz",
+    "fastq": "H06HDADXX130110.1.ATCACGAT.20k_reads_{1,2}.fastq.gz",
     "omics": {
 	"ecr_prefix": "426997564500.dkr.ecr.us-east-1.amazonaws.com"
     },
@@ -84,7 +84,7 @@
 	"bwa_mem2_08": {
 	    "container": "szarate/bwa-mem2:v2.2.1",
 	    "cpus": "4",
-	    "memory": "16 GB",
+	    "memory": "32 GB",
 	    "parameters": {
 	    }
 	},
