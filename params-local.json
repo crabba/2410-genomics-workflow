@@ -4,6 +4,10 @@
 	"gatk": "java -jar /gatk/gatk.jar"
     },
     "fastq": "R{1,2}.fastq.gz",
+    "omics": {
+	"ecr_prefix": "426997564500.dkr.ecr.us-east-1.amazonaws.com"
+    },
+    "onOmics": false,
     "outputdir": "outt",
     "steps": {
 	"fastqc_03": {
@@ -79,8 +83,10 @@
 	},
 	"bwa_mem2_08": {
 	    "container": "szarate/bwa-mem2:v2.2.1",
-	    "cpus": "2",
-	    "memory": "4 GB"
+	    "cpus": "4",
+	    "memory": "16 GB",
+	    "parameters": {
+	    }
 	},
 	"merge_bam_alignment_09": {
 	    "container": "broadinstitute/gatk:latest",
@@ -125,7 +131,7 @@
 		"READ1_TRIM": "",
 		"READ2_ALIGNED_BAM": "",
 		"READ2_TRIM": "",
-		"REFERENCE_SEQUENCE": "Homo_sapiens_assembly38.fasta*",
+		"REFERENCE_SEQUENCE": "",
 		"SORT_ORDER": "",
 		"TMP_DIR": "",
 		"UNMAP_CONTAMINANT_READS": "",

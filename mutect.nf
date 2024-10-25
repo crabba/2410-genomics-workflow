@@ -1,8 +1,12 @@
+nextflow.enable.dsl = 2
+
 params.contaminants = ''
 params.fastq = ''
 params.intervals = ''
 params.limits = ''
 
+ecr_prefix = params.onOmics ? params.omics.ecr_prefix : ""
+publish_dir = params.onOmics ? "/mnt/workflow/pubdir" : "."
 
 vals_03 = params.steps.fastqc_03.parameters
 vals_04 = params.steps.fastq_to_bam_04.parameters
@@ -13,9 +17,10 @@ vals_08 = params.steps.bwa_mem2_08.parameters
 vals_09 = params.steps.merge_bam_alignment_09.parameters
 
 process fastqc_03 {
-    container params.steps.fastqc_03.container
+    container { ecr_prefix + params.steps.fastqc_03.container }
     cpus params.steps.fastqc_03.cpus
     memory params.steps.fastqc_03.memory
+    publishDir publish_dir
 
     input:
     tuple val(sample_id), path(reads)
@@ -40,9 +45,10 @@ process fastqc_03 {
 }
 
 process fastq_to_bam_04 {
-    container params.steps.fastq_to_bam_04.container
+    container { ecr_prefix + params.steps.fastq_to_bam_04.container }
     cpus params.steps.fastq_to_bam_04.cpus
     memory params.steps.fastq_to_bam_04.memory
+    publishDir publish_dir
 
     input:
     tuple val(sample_id), path(reads)
@@ -74,9 +80,10 @@ process fastq_to_bam_04 {
 }
 
 process fastqc_05 {
-    container params.steps.fastqc_05.container
+    container { ecr_prefix + params.steps.fastqc_05.container }
     cpus params.steps.fastqc_05.cpus
     memory params.steps.fastqc_05.memory
+    publishDir publish_dir
 
     input:
     tuple val(sample_id), path(reads)
@@ -93,9 +100,10 @@ process fastqc_05 {
 }
 
 process sort_bam_06 {
-    container params.steps.sort_bam_06.container
+    container { ecr_prefix + params.steps.sort_bam_06.container }
     cpus params.steps.sort_bam_06.cpus
     memory params.steps.sort_bam_06.memory
+    publishDir publish_dir
 
     input:
     path in_bam
@@ -115,9 +123,10 @@ process sort_bam_06 {
 }
 
 process sam_to_fastq_07 {
-    container params.steps.sam_to_fastq_07.container
+    container { ecr_prefix + params.steps.sam_to_fastq_07.container }
     cpus params.steps.sam_to_fastq_07.cpus
     memory params.steps.sam_to_fastq_07.memory
+    publishDir publish_dir
 
     input:
     path in_bam
@@ -153,38 +162,41 @@ process sam_to_fastq_07 {
 }
 
 process bwa_mem2_08 {
-    container params.steps.bwa_mem2_08.container
+    container { ecr_prefix + params.steps.bwa_mem2_08.container }
     cpus params.steps.bwa_mem2_08.cpus
     memory params.steps.bwa_mem2_08.memory
+    publishDir publish_dir
 
     input:
     path in_fastq
-    path in_ref
+    path reference_sequence
+    path reference_index
 
     output:
     path 'bwa_mem2_out.sam', emit: sam
     
     shell:
-    """
-    echo "bwa_mem2_08: in_fastq ${in_fastq}"
+    '''
+    ref_stem=`basename !{reference_sequence}`
+    echo "bwa_mem2_08: in_fastq !{in_fastq}, ref_stem $ref_stem"
     bwa-mem2 \
     index \
-    -p Homo_sapiens_assembly19.fasta \
-    ${in_fastq[0]} ${in_fastq[1]}
+    -p ${ref_stem} \
+    !{reference_sequence}
 
     bwa-mem2 \
     mem \
     -o bwa_mem2_out.sam \
-    ${in_ref} \
-    ${in_fastq[0]} ${in_fastq[1]}
-
-    """
+    !{reference_sequence}
+    !{in_fastq[0]} ${in_fastq[1]}
+    '''
 }
 
 process merge_bam_alignment_09 {
-    container params.steps.merge_bam_alignment_09.container
+    container { ecr_prefix + params.steps.merge_bam_alignment_09.container }
     cpus params.steps.merge_bam_alignment_09.cpus
     memory params.steps.merge_bam_alignment_09.memory
+    publishDir publish_dir
 
     input:
     path aligned_bam
@@ -209,7 +221,7 @@ process merge_bam_alignment_09 {
 }
 
 process group_reads_by_umi_10 {
-    container params.steps.group_reads_by_umi.container
+    container { ecr_prefix + params.steps.group_reads_by_umi.container }
     cpus params.steps.group_reads_by_umi.cpus
     memory params.steps.group_reads_by_umi.memory
 
@@ -225,7 +237,7 @@ process group_reads_by_umi_10 {
 }
 
 process call_molecular_consensus_reads_11 {
-    container params.steps.call_molecular_consensus_reads.container
+    container { ecr_prefix + params.steps.call_molecular_consensus_reads.container }
     cpus params.steps.call_molecular_consensus_reads.cpus
     memory params.steps.call_molecular_consensus_reads.memory
 
@@ -241,7 +253,7 @@ process call_molecular_consensus_reads_11 {
 }
 
 process filter_consensus_reads_12 {
-    container params.steps.filter_consensus_reads.container
+    container { ecr_prefix + params.steps.filter_consensus_reads.container }
     cpus params.steps.filter_consensus_reads.cpus
     memory params.steps.filter_consensus_reads.memory
 
@@ -257,7 +269,7 @@ process filter_consensus_reads_12 {
 }
 
 process sam_to_fastq_13 {
-    container params.steps.sam_to_fastq.container
+    container { ecr_prefix + params.steps.sam_to_fastq.container }
     cpus params.steps.sam_to_fastq.cpus
     memory params.steps.sam_to_fastq.memory
 
@@ -278,7 +290,7 @@ process sam_to_fastq_13 {
 }
 
 process cutadapt_14 {
-    container params.steps.cutadapt.container
+    container { ecr_prefix + params.steps.cutadapt.container }
     cpus params.steps.cutadapt.cpus
     memory params.steps.cutadapt.memory
 
@@ -307,7 +319,7 @@ workflow {
 
     fastqc_03(fastq_pairs_ch)
     fastq_to_bam_04(fastq_pairs_ch) | sam_to_fastq_07
-    bwa_mem2_08(sam_to_fastq_07.out.fastq, ref_ch)
+    bwa_mem2_08(sam_to_fastq_07.out.fastq, ref_ch, ref_idx_ch)
     sort_bam_06(fastq_to_bam_04.out.bam)
     // merge_bam_alignment_09(bwa_mem2_08.out.sam, sort_bam_06.out.bam, ref_ch, ref_idx_ch, ref_dict_ch)
 
