@@ -5,7 +5,7 @@ params.fastq = ''
 params.intervals = ''
 params.limits = ''
 
-ecr_prefix = params.onOmics ? params.omics.ecr_prefix : ""
+ecr_prefix = params.onOmics ? params.omics_ecr_prefix : ""
 publish_dir = params.onOmics ? "/mnt/workflow/pubdir" : "."
 
 vals_03 = params.steps.fastqc_03.parameters
@@ -18,9 +18,9 @@ vals_09 = params.steps.merge_bam_alignment_09.parameters
 vals_10 = params.steps.group_reads_by_umi_10.parameters
 
 process fastqc_03 {
-    container { ecr_prefix + params.steps.fastqc_03.container }
-    cpus params.steps.fastqc_03.cpus
-    memory params.steps.fastqc_03.memory
+    container { ecr_prefix + params_steps_fastqc_03_container }
+    cpus params_steps_fastqc_03_cpus
+    memory params_steps_fastqc_03_memory
     publishDir publish_dir
 
     input:
@@ -29,12 +29,10 @@ process fastqc_03 {
     shell:
     """
     mkdir ${params.outputdir}
-    echo "sample_id ${sample_id}, reads ${reads}"
-    echo "container is ${params.steps.fastqc_03.container}"
     fastqc \
-    --kmers !{vals_03['kmers']} \
-    --min_length !{vals_03['min_length']} \
-    --nogroup !{vals_03['nogroup']} \
+    --kmers 7 \
+    --min_length null \
+    --nogroup false \
     --outdir ${params.outputdir} \
     ${reads}
     """
@@ -46,9 +44,9 @@ process fastqc_03 {
 }
 
 process fastq_to_bam_04 {
-    container { ecr_prefix + params.steps.fastq_to_bam_04.container }
-    cpus params.steps.fastq_to_bam_04.cpus
-    memory params.steps.fastq_to_bam_04.memory
+    container { ecr_prefix + params_steps_fastq_to_bam_04_container }
+    cpus params_steps_fastq_to_bam_04_cpus
+    memory params_steps_fastq_to_bam_04_memory
     publishDir publish_dir
 
     input:
@@ -62,28 +60,28 @@ process fastq_to_bam_04 {
     echo "fastq_to_bam_04: sample_id ${sample_id}, reads ${reads}"
     ${params.cmd.fgbio} \
     FastqToBam \
-    --comment=!{vals_04['comment']} \
-    --description=!{vals_04['description']} \
+    --comment=sample-comment \
+    --description=sample-description \
     --input=${reads[0]} ${reads[1]} \
-    --library=!{vals_04['sample']} \
+    --library=b \
     --output=fastq_to_bam_out.bam \
-    --platform=!{vals_04['platform']} \
-    --platform-model=!{vals_04['platform-model']} \
-    --platform-unit=!{vals_04['platform-unit']} \
-    --predicted-insert-size=!{vals_04['predicted-insert-size']} \
-    --read-group-id=!{vals_04['read-group-id']} \
-    --run-date=!{vals_04['run-date']} \
-    --sample=!{vals_04['sample']} \
-    --sequencing-center=!{vals_04['sequencing-center']} \
-    --sort=!{vals_04['sort']} \
-    --umi-tag=!{vals_04['umi-tag']}
+    --platform=sample-platform \
+    --platform-model=sample-platform-model \
+    --platform-unit=sample-platform-unit \
+    --predicted-insert-size=111 \
+    --read-group-id=c \
+    --run-date=2024-10-21 \
+    --sample=a \
+    --sequencing-center=sample-sequencing-center \
+    --sort=false \
+    --umi-tag=", "
     """
 }
 
 process fastqc_05 {
-    container { ecr_prefix + params.steps.fastqc_05.container }
-    cpus params.steps.fastqc_05.cpus
-    memory params.steps.fastqc_05.memory
+    container { ecr_prefix + params_steps_fastqc_05_container }
+    cpus params_steps_fastqc_05_cpus
+    memory params_steps_fastqc_05_memory
     publishDir publish_dir
 
     input:
@@ -93,7 +91,7 @@ process fastqc_05 {
     """
     mkdir ${params.outputdir}
     echo "sample_id ${sample_id}, reads ${reads}"
-    echo "container is ${params.steps.fastqc.container}"
+    echo "container is ${params_steps_fastqc_container}"
     fastqc \
     --outdir ${params.outputdir} \
     ${reads}
@@ -101,9 +99,9 @@ process fastqc_05 {
 }
 
 process sort_bam_06 {
-    container { ecr_prefix + params.steps.sort_bam_06.container }
-    cpus params.steps.sort_bam_06.cpus
-    memory params.steps.sort_bam_06.memory
+    container { ecr_prefix + params_steps_sort_bam_06_container }
+    cpus params_steps_sort_bam_06_cpus
+    memory params_steps_sort_bam_06_memory
     publishDir publish_dir
 
     input:
@@ -114,7 +112,7 @@ process sort_bam_06 {
 
     shell:
     """
-    ${params.cmd.fgbio} \
+    java -jar /root/fgbio-2.3.0.jar \
     SortBam \
     --input=${in_bam} \
     --max-records-in-ram=${vals_06['max-records-in-ram']} \
@@ -124,9 +122,9 @@ process sort_bam_06 {
 }
 
 process sam_to_fastq_07 {
-    container { ecr_prefix + params.steps.sam_to_fastq_07.container }
-    cpus params.steps.sam_to_fastq_07.cpus
-    memory params.steps.sam_to_fastq_07.memory
+    container { ecr_prefix + params_steps_sam_to_fastq_07_container }
+    cpus params_steps_sam_to_fastq_07_cpus
+    memory params_steps_sam_to_fastq_07_memory
     publishDir publish_dir
 
     input:
@@ -163,9 +161,9 @@ process sam_to_fastq_07 {
 }
 
 process bwa_mem2_08 {
-    container { ecr_prefix + params.steps.bwa_mem2_08.container }
-    cpus params.steps.bwa_mem2_08.cpus
-    memory params.steps.bwa_mem2_08.memory
+    container { ecr_prefix + params_steps_bwa_mem2_08_container }
+    cpus params_steps_bwa_mem2_08_cpus
+    memory params_steps_bwa_mem2_08_memory
     publishDir publish_dir
 
     input:
@@ -199,9 +197,9 @@ process bwa_mem2_08 {
 }
 
 process merge_bam_alignment_09 {
-    container { ecr_prefix + params.steps.merge_bam_alignment_09.container }
-    cpus params.steps.merge_bam_alignment_09.cpus
-    memory params.steps.merge_bam_alignment_09.memory
+    container { ecr_prefix + params_steps_merge_bam_alignment_09_container }
+    cpus params_steps_merge_bam_alignment_09_cpus
+    memory params_steps_merge_bam_alignment_09_memory
     publishDir publish_dir
 
     input:
@@ -217,7 +215,7 @@ process merge_bam_alignment_09 {
     shell:
     """
     echo "merge_bam_alignment_09 reference_sequence ${reference_sequence}"
-    ${params.cmd.gatk} \
+    java -jar /gatk/gatk.jar \
     MergeBamAlignment \
     --ALIGNED_BAM ${aligned_bam} \
     --OUTPUT merge_bam_alignment_out.bam \
@@ -227,9 +225,9 @@ process merge_bam_alignment_09 {
 }
 
 process group_reads_by_umi_10 {
-    container { ecr_prefix + params.steps.group_reads_by_umi_10.container }
-    cpus params.steps.group_reads_by_umi_10.cpus
-    memory params.steps.group_reads_by_umi_10.memory
+    container { ecr_prefix + params_steps_group_reads_by_umi_10_container }
+    cpus params_steps_group_reads_by_umi_10_cpus
+    memory params_steps_group_reads_by_umi_10_memory
 
     input:
     path in_bam
@@ -248,9 +246,9 @@ process group_reads_by_umi_10 {
 }
 
 process call_molecular_consensus_reads_11 {
-    container { ecr_prefix + params.steps.call_molecular_consensus_reads.container }
-    cpus params.steps.call_molecular_consensus_reads.cpus
-    memory params.steps.call_molecular_consensus_reads.memory
+    container { ecr_prefix + params_steps_call_molecular_consensus_reads_container }
+    cpus params_steps_call_molecular_consensus_reads_cpus
+    memory params_steps_call_molecular_consensus_reads_memory
 
     input:
     path in_bam
@@ -264,9 +262,9 @@ process call_molecular_consensus_reads_11 {
 }
 
 process filter_consensus_reads_12 {
-    container { ecr_prefix + params.steps.filter_consensus_reads.container }
-    cpus params.steps.filter_consensus_reads.cpus
-    memory params.steps.filter_consensus_reads.memory
+    container { ecr_prefix + params_steps_filter_consensus_reads_container }
+    cpus params_steps_filter_consensus_reads_cpus
+    memory params_steps_filter_consensus_reads_memory
 
     input:
     path in_bam
@@ -280,9 +278,9 @@ process filter_consensus_reads_12 {
 }
 
 process sam_to_fastq_13 {
-    container { ecr_prefix + params.steps.sam_to_fastq.container }
-    cpus params.steps.sam_to_fastq.cpus
-    memory params.steps.sam_to_fastq.memory
+    container { ecr_prefix + params_steps_sam_to_fastq_container }
+    cpus params_steps_sam_to_fastq_cpus
+    memory params_steps_sam_to_fastq_memory
 
     input:
     path in_bam
@@ -292,7 +290,7 @@ process sam_to_fastq_13 {
 
     script:
     """
-    ${params.cmd.gatk} \
+    java -jar /gatk/gatk.jar \
     SamToFastq \
     --INPUT ${in_bam} \
     --FASTQ sam_to_fastq_out_R1.fastq.gz \
@@ -301,9 +299,9 @@ process sam_to_fastq_13 {
 }
 
 process cutadapt_14 {
-    container { ecr_prefix + params.steps.cutadapt.container }
-    cpus params.steps.cutadapt.cpus
-    memory params.steps.cutadapt.memory
+    container { ecr_prefix + params_steps_cutadapt_container }
+    cpus params_steps_cutadapt_cpus
+    memory params_steps_cutadapt_memory
 
     input:
     path in_bam
