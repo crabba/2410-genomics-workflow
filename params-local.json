@@ -3,7 +3,8 @@
 	"fgbio": "java -jar /root/fgbio-2.3.0.jar",
 	"gatk": "java -jar /gatk/gatk.jar"
     },
-    "fastq": "H06HDADXX130110.1.ATCACGAT.20k_reads_{1,2}.fastq.gz",
+    "fastq_1": "s3://crabba-raas-data/fastq/H06HDADXX130110.1.ATCACGAT.20k_reads_1.fastq.gz",
+    "fastq_2": "s3://crabba-raas-data/fastq/H06HDADXX130110.1.ATCACGAT.20k_reads_2.fastq.gz",
     "omics": {
 	"ecr_prefix": "426997564500.dkr.ecr.us-east-1.amazonaws.com"
     },
