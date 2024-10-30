@@ -24,19 +24,19 @@ process fastqc_03 {
     publishDir publish_dir
 
     input:
-    tuple val(sample_id), path(reads)
+    path fastq_1
+    path fastq_2
 
     shell:
     """
     mkdir ${params.outputdir}
-    echo "sample_id ${sample_id}, reads ${reads}"
     echo "container is ${params.steps.fastqc_03.container}"
     fastqc \
     --kmers !{vals_03['kmers']} \
     --min_length !{vals_03['min_length']} \
     --nogroup !{vals_03['nogroup']} \
     --outdir ${params.outputdir} \
-    ${reads}
+    ${fastq_1} ${fastq_2}
     """
     // These params currently filed under Too Hard as they require input files
     //    --contaminants !{vals_03['contaminants']} \
@@ -52,7 +52,9 @@ process fastq_to_bam_04 {
     publishDir publish_dir
 
     input:
-    tuple val(sample_id), path(reads)
+    // tuple val(sample_id), path(reads)
+    path fastq_1
+    path fastq_2
 
     output:
     path 'fastq_to_bam_out.bam', emit: bam
@@ -64,7 +66,7 @@ process fastq_to_bam_04 {
     FastqToBam \
     --comment=!{vals_04['comment']} \
     --description=!{vals_04['description']} \
-    --input=${reads[0]} ${reads[1]} \
+    --input=${fastq_1} ${fastq_2} \
     --library=!{vals_04['sample']} \
     --output=fastq_to_bam_out.bam \
     --platform=!{vals_04['platform']} \
@@ -317,7 +319,9 @@ process cutadapt_14 {
 }
 
 workflow {
-    def fastq_pairs_ch = Channel.fromFilePairs(params.fastq)
+    // def fastq_pairs_ch = Channel.fromFilePairs(params.fastq)
+    def fastq_1_ch = Channel.fromFilePairs(params.fastq_1)
+    def fastq_2_ch = Channel.fromFilePairs(params.fastq_2)
     def ref_ch = Channel.fromPath('Homo_sapiens_assembly38.fasta')
     def ref_idx_ch = Channel.fromPath('Homo_sapiens_assembly38.fasta.fai')
     def ref_idx_bwt = Channel.fromPath('Homo_sapiens_assembly38.fasta.bwt.2bit.64')
@@ -328,8 +332,8 @@ workflow {
     def ref_0123 = Channel.fromPath('Homo_sapiens_assembly38.fasta.0123')
     
 
-    fastqc_03(fastq_pairs_ch)
-    fastq_to_bam_04(fastq_pairs_ch) | sam_to_fastq_07
+    fastqc_03(fastq_1_ch, fastq_2_ch)
+    fastq_to_bam_04(fastq_1_ch, fastq_2_ch) | sam_to_fastq_07
     bwa_mem2_08(sam_to_fastq_07.out.fastq, ref_ch, ref_idx_ch, ref_idx_bwt, ref_ann, ref_amb, ref_pac, ref_0123)
     sort_bam_06(fastq_to_bam_04.out.bam)
     merge_bam_alignment_09(bwa_mem2_08.out.sam, sort_bam_06.out.bam, ref_ch, ref_idx_ch, ref_dict_ch)
