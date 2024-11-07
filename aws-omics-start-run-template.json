@@ -1,0 +1,14 @@
+{
+    "logLevel": "ALL",
+    "name": "mutect-${TIME_NOW}",
+    "outputUri": "s3://crabba-raas-genomics/output/",
+    "parameters": ${NEXTFLOW_PARAMS_INPUTS_AWS},
+    "retentionMode": "RETAIN",
+    "roleArn": "${OMICS_ROLE_ARN}",
+    "storageType": "DYNAMIC",
+    "tags": {
+        "project": "241002-genomics-workflow"
+    },
+    "workflowId": "$AWS_OMICS_WORKFLOW_ID",
+    "workflowType": "PRIVATE"
+}

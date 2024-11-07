@@ -1,0 +1,11 @@
+{
+    "name": "mutect",
+    "description": "FASTQ to VCF Mutect2",
+    "engine": "NEXTFLOW",
+    "definitionUri": "s3://crabba-data/genomics/workflows/nextflow/main.zip",
+    "parameterTemplate": ${NEXTFLOW_PARAM_DESCRIPTION},    
+    "main": "main.nf",
+    "tags": {
+        "project": "241002-genomics-workflow"
+    }
+}

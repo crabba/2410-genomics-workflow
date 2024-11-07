@@ -29,7 +29,7 @@ process fastqc_03 {
     --kmers 7 \
     --min_length null \
     --nogroup false \
-    --outdir ${params.outputdir} \
+    --outdir !{params.outputdir} \
     !{fastq_1} !{fastq_2}
     '''
     // These params currently filed under Too Hard as they require input files
@@ -71,9 +71,9 @@ process fastq_to_bam_04 {
     --run-date=2024-10-21 \
     --sample="a" \
     --sequencing-center="sample-sequencing-center" \
-    --sort=false \
-    --umi-tag=", "
+    --sort=false
     '''
+    // --umi-tag=""
     //     --input=!{reads[0]} !{reads[1]} \
 }
 
@@ -111,7 +111,7 @@ process sort_bam_06 {
     '''
     java -jar /root/fgbio-2.3.0.jar \
     SortBam \
-    --input=${in_bam} \
+    --input=!{in_bam} \
     --max-records-in-ram=111111 \
     --output="sort_bam_out.bam" \
     --sort-order="Queryname"
@@ -132,7 +132,7 @@ process sam_to_fastq_07 {
 
     shell:
     '''
-    ${params.cmd.gatk} \
+    java -jar /gatk/gatk.jar \
     SamToFastq \
     --CLIPPING_MIN_LENGTH "0" \
     --FASTQ "sam_to_fastq_out_R1.fastq.gz" \
@@ -184,6 +184,7 @@ process bwa_mem2_08 {
     bwa-mem2 \
     mem \
     -o bwa_mem2_out.sam \
+    -t !{params.steps_08_bwa_mem2_threads} \
     !{reference_sequence} \
     !{in_fastq[0]} !{in_fastq[1]}
     '''
@@ -213,6 +214,11 @@ process merge_bam_alignment_09 {
     '''
     java -jar /gatk/gatk.jar \
     MergeBamAlignment \
+    --ADD_MATE_CIGAR !{params.steps_09_merge_bam_alignment_add_mate_cigar} \
+    --ALIGNED_READS_ONLY !{params.steps_09_merge_bam_alignment_aligned_reads_only} \
+    --ALIGNER_PROPER_PAIR_FLAGS !{params.steps_09_merge_bam_alignment_aligner_proper_pair_flags} \
+    --PRIMARY_ALIGNMENT_STRATEGY !{params.steps_09_merge_bam_alignment_primary_alignment_strategy} \
+    --SORT_ORDER !{params.steps_09_merge_bam_alignment_sort_order} \
     --ALIGNED_BAM !{aligned_bam} \
     --OUTPUT merge_bam_alignment_out.bam \
     --REFERENCE_SEQUENCE !{reference_sequence} \
@@ -236,10 +242,18 @@ process group_reads_by_umi_10 {
     '''
     java -jar /root/fgbio-2.3.0.jar \
     GroupReadsByUmi \
+    --edits=1 \
+    --include-non-pf-reads="false" \
+    --include-secondary="false" \
+    --include-supplementary="false" \
     --input=!{in_bam} \
+    --mark-duplicates="false" \
     --output=group_reads_by_umi_out.bam \
     --strategy="adjacency"
     '''
+    // --family_size_histogram_on="false" \
+    // --assign-tag="" \
+    // --raw-tag="" \
 }
 
 process call_molecular_consensus_reads_11 {
@@ -316,21 +330,24 @@ workflow {
     // def fastq_pairs_ch = Channel.fromFilePairs(params.fastq)
     def fastq_1_ch = Channel.fromPath(params.fastq_1)
     def fastq_2_ch = Channel.fromPath(params.fastq_2)
-    def ref_ch = Channel.fromPath('Homo_sapiens_assembly38.fasta')
-    def ref_idx_ch = Channel.fromPath('Homo_sapiens_assembly38.fasta.fai')
-    def ref_idx_bwt = Channel.fromPath('Homo_sapiens_assembly38.fasta.bwt.2bit.64')
-    def ref_dict_ch = Channel.fromPath('Homo_sapiens_assembly38.dict')
-    def ref_ann = Channel.fromPath('Homo_sapiens_assembly38.fasta.ann')
-    def ref_amb = Channel.fromPath('Homo_sapiens_assembly38.fasta.amb')
-    def ref_pac = Channel.fromPath('Homo_sapiens_assembly38.fasta.pac')
-    def ref_0123 = Channel.fromPath('Homo_sapiens_assembly38.fasta.0123')
-    
+
+    // Hard coded for now
+    // def ref_prefix = "s3://crabba-raas-data/genomics/ref/hg38/"
+    def ref_prefix = ""
+    def ref_ch      = Channel.fromPath(ref_prefix + 'Homo_sapiens_assembly38.fasta')
+    def ref_idx_ch  = Channel.fromPath(ref_prefix + 'Homo_sapiens_assembly38.fasta.fai')
+    def ref_idx_bwt = Channel.fromPath(ref_prefix + 'Homo_sapiens_assembly38.fasta.bwt.2bit.64')
+    def ref_dict_ch = Channel.fromPath(ref_prefix + 'Homo_sapiens_assembly38.dict')
+    def ref_ann     = Channel.fromPath(ref_prefix + 'Homo_sapiens_assembly38.fasta.ann')
+    def ref_amb     = Channel.fromPath(ref_prefix + 'Homo_sapiens_assembly38.fasta.amb')
+    def ref_pac     = Channel.fromPath(ref_prefix + 'Homo_sapiens_assembly38.fasta.pac')
+    def ref_0123    = Channel.fromPath(ref_prefix + 'Homo_sapiens_assembly38.fasta.0123')
 
     fastqc_03(fastq_1_ch, fastq_2_ch)
     fastq_to_bam_04(fastq_1_ch, fastq_2_ch) | sam_to_fastq_07
     bwa_mem2_08(sam_to_fastq_07.out.fastq, ref_ch, ref_idx_ch, ref_idx_bwt, ref_ann, ref_amb, ref_pac, ref_0123)
     sort_bam_06(fastq_to_bam_04.out.bam)
-    merge_bam_alignment_09(bwa_mem2_08.out.sam, sort_bam_06.out.bam, ref_ch, ref_idx_ch, ref_dict_ch)
+    merge_bam_alignment_09(bwa_mem2_08.out.sam, sort_bam_06.out.bam, ref_ch, ref_idx_ch, ref_dict_ch) | group_reads_by_umi_10
 
     // merge_bam_alignment_09(bwa_mem2.out_sam, sort_bam.out_bam) | group_reads_by_umi_10 \
     // | call_molecular_consensus_reads_11 | filter_consensus_reads_12 | sam_to_fastq_13 | cutadapt_14
