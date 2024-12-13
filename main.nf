@@ -209,7 +209,7 @@ process merge_bam_alignment_09 {
     path reference_dict
 
     output:
-    path 'merge_bam_alignment_out.bam', emit: out_bam
+    path 'merge_bam_alignment_out.bam', emit: bam
     
     shell:
     '''
@@ -237,7 +237,7 @@ process group_reads_by_umi_10 {
     path in_bam
 
     output:
-    path 'group_reads_by_umi_out.bam', emit: out_bam
+    path 'group_reads_by_umi_out.bam', emit: bam
     
     shell:
     '''
@@ -267,7 +267,7 @@ process call_molecular_consensus_reads_11 {
     path in_bam
 
     output:
-    path 'call_molecular_consensus_reads_out.bam', emit: out_bam
+    path 'call_molecular_consensus_reads_out.bam', emit: bam
     
     shell:
     '''
@@ -290,7 +290,6 @@ process call_molecular_consensus_reads_11 {
     // --read-group-id=null \
     // --read-name-prefix=null \
     // --tag=null
-
 }
 
 process filter_consensus_reads_12 {
@@ -300,13 +299,29 @@ process filter_consensus_reads_12 {
 
     input:
     path in_bam
+    path reference_sequence
 
     output:
-    path 'filter_consensus_reads_out.bam', emit: out_bam
+    path 'filter_consensus_reads_out.bam', emit: bam
     
     shell:
     '''
+    java -Xmx4096m -jar /root/fgbio-2.3.0.jar \
+    FilterConsensusReads \
+    --input=!{in_bam} \
+    --max-base-error-rate="1.0" \
+    --max-read-error-rate="1.0" \
+    --min-base-quality=10 \
+    --min-reads=6 \
+    --output=filter_consensus_reads_out.bam \
+    --ref=!{reference_sequence} \
+    --require-single-strand-agreement="false" \
+    --reverse-per-base-tags="false"
     '''
+    // 'ref_cond' section of the GA file has "ref": "hg19"
+    // --max-no-call-fraction=null \
+    // --min-mean-base-quality=null \
+    // --sort-order=null
 }
 
 process sam_to_fastq_13 {
@@ -316,18 +331,50 @@ process sam_to_fastq_13 {
 
     input:
     path in_bam
+    path reference_sequence
 
     output:
-    path 'sam_to_fastq_out_R?.fastq.gz', emit: out_fastq
+    path 'sam_to_fastq_out_R?.fastq.gz', emit: fastq
 
     shell:
     '''
     java -jar /gatk/gatk.jar \
     SamToFastq \
+    --CLIPPING_MIN_LENGTH "0" \
+    --COMPRESSION_LEVEL 5 \
+    --CREATE_INDEX false \
+    --CREATE_MD5_FILE false \
+    --FASTQ "sam_to_fastq_out_R1.fastq.gz" \
+    --INCLUDE_NON_PF_READS false \
+    --INCLUDE_NON_PRIMARY_ALIGNMENTS false \
     --INPUT !{in_bam} \
-    --FASTQ sam_to_fastq_out_R1.fastq.gz \
-    --SECOND_END_FASTQ sam_to_fastq_out_R2.fastq.gz
+    --INTERLEAVE false \
+    --MAX_RECORDS_IN_RAM 2000000 \
+    --QUALITY null \
+    --QUIET false \
+    --READ1_MAX_BASES_TO_WRITE null \
+    --READ1_TRIM "0" \
+    --READ2_MAX_BASES_TO_WRITE null \
+    --READ2_TRIM "0" \
+    --RE_REVERSE true \
+    --REFERENCE_SEQUENCE !{reference_sequence} \
+    --RG_TAG "PU" \
+    --SECOND_END_FASTQ "sam_to_fastq_out_R2.fastq.gz" \
+    --USE_JDK_DEFLATER false \
+    --USE_JDK_INFLATER false \
+    --VALIDATION_STRINGENCY "STRICT" \
+    --VERBOSITY "INFO"
     '''
+    //         "GA4GH_CLIENT_SECRETS": "client_secrets.json",
+    //         "arguments_file": {
+    //        "CLIPPING_ACTION": "",
+    //        "CLIPPING_ATTRIBUTE": "",
+    //        "UNPAIRED_FASTQ_sel": "false"
+
+    // Argument 'FASTQ' cannot be used in conjunction with argument(s) OUTPUT_PER_RG COMPRESS_OUTPUTS_PER_RG
+    // --OUTPUT_PER_RG false \
+    // --COMPRESS_OUTPUTS_PER_RG false \
+
 }
 
 process cutadapt_14 {
@@ -367,8 +414,9 @@ workflow {
     fastq_to_bam_04(fastq_1_ch, fastq_2_ch) | sam_to_fastq_07
     bwa_mem2_08(sam_to_fastq_07.out.fastq, ref_ch, ref_idx_ch, ref_idx_bwt, ref_ann, ref_amb, ref_pac, ref_0123)
     sort_bam_06(fastq_to_bam_04.out.bam)
-    merge_bam_alignment_09(bwa_mem2_08.out.sam, sort_bam_06.out.bam, ref_ch, ref_idx_ch, ref_dict_ch) | group_reads_by_umi_10 \
-    | call_molecular_consensus_reads_11 | filter_consensus_reads_12 | sam_to_fastq_13 | cutadapt_14 \
+    merge_bam_alignment_09(bwa_mem2_08.out.sam, sort_bam_06.out.bam, ref_ch, ref_idx_ch, ref_dict_ch) | group_reads_by_umi_10 | call_molecular_consensus_reads_11
+    filter_consensus_reads_12(call_molecular_consensus_reads_11.out.bam, ref_ch)
+    sam_to_fastq_13(filter_consensus_reads_12.out.bam, ref_ch) | cutadapt_14 \
 
 
     // merge_bam_alignment_09(bwa_mem2.out_sam, sort_bam.out_bam) | group_reads_by_umi_10 \
