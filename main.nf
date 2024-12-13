@@ -68,12 +68,13 @@ process fastq_to_bam_04 {
     --platform-unit="sample-platform-unit" \
     --predicted-insert-size=111 \
     --read-group-id="c" \
+    --read-structures=12M11S+T +T \
     --run-date=2024-10-21 \
     --sample="a" \
     --sequencing-center="sample-sequencing-center" \
-    --sort=false
+    --sort=false \
+    --umi-tag="RX"
     '''
-    // --umi-tag=""
     //     --input=!{reads[0]} !{reads[1]} \
 }
 
@@ -270,7 +271,26 @@ process call_molecular_consensus_reads_11 {
     
     shell:
     '''
+    java -jar /root/fgbio-2.3.0.jar \
+    CallMolecularConsensusReads \
+    --consensus-call-overlapping-bases="false" \
+    --debug="false" \
+    --input=!{in_bam} \
+    --min-reads=6 \
+    --output=call_molecular_consensus_reads_out.bam \
+    --output-per-base-tags="true"
     '''
+    // "rejects_output_on": "false" - Could this be '-r PathToBam, --rejects=PathToBam'?
+    // Galaxy tool ver 2.2.1, my ver 2.3.0
+    // --sort-order="" \
+    // --error-rate-pre-umi=null \
+    // --max-reads=null \
+    // --min-input-base-quality=null \
+    // --error-rate-post-umi=null \
+    // --read-group-id=null \
+    // --read-name-prefix=null \
+    // --tag=null
+
 }
 
 process filter_consensus_reads_12 {
@@ -333,7 +353,7 @@ workflow {
 
     // Hard coded for now
     // def ref_prefix = "s3://crabba-raas-data/genomics/ref/hg38/"
-    def ref_prefix = ""
+    def ref_prefix = params.ref_prefix
     def ref_ch      = Channel.fromPath(ref_prefix + 'Homo_sapiens_assembly38.fasta')
     def ref_idx_ch  = Channel.fromPath(ref_prefix + 'Homo_sapiens_assembly38.fasta.fai')
     def ref_idx_bwt = Channel.fromPath(ref_prefix + 'Homo_sapiens_assembly38.fasta.bwt.2bit.64')
@@ -347,7 +367,9 @@ workflow {
     fastq_to_bam_04(fastq_1_ch, fastq_2_ch) | sam_to_fastq_07
     bwa_mem2_08(sam_to_fastq_07.out.fastq, ref_ch, ref_idx_ch, ref_idx_bwt, ref_ann, ref_amb, ref_pac, ref_0123)
     sort_bam_06(fastq_to_bam_04.out.bam)
-    merge_bam_alignment_09(bwa_mem2_08.out.sam, sort_bam_06.out.bam, ref_ch, ref_idx_ch, ref_dict_ch) | group_reads_by_umi_10
+    merge_bam_alignment_09(bwa_mem2_08.out.sam, sort_bam_06.out.bam, ref_ch, ref_idx_ch, ref_dict_ch) | group_reads_by_umi_10 \
+    | call_molecular_consensus_reads_11 | filter_consensus_reads_12 | sam_to_fastq_13 | cutadapt_14 \
+
 
     // merge_bam_alignment_09(bwa_mem2.out_sam, sort_bam.out_bam) | group_reads_by_umi_10 \
     // | call_molecular_consensus_reads_11 | filter_consensus_reads_12 | sam_to_fastq_13 | cutadapt_14

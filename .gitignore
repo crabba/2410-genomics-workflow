@@ -2,3 +2,9 @@
 .gitignore
 .nextflow*
 work/
+*.fastq.gz
+*.sam
+*.bam
+Homo_sapiens_assembly38.dict
+Homo_sapiens_assembly38.fasta*
+*.zip
