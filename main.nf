@@ -129,14 +129,14 @@ process sam_to_fastq_07 {
     path in_bam
 
     output:
-    path 'sam_to_fastq_out_R?.fastq.gz', emit: fastq
+    path 'sam_to_fastq_07_out_R?.fastq.gz', emit: fastq
 
     shell:
     '''
     java -jar /gatk/gatk.jar \
     SamToFastq \
     --CLIPPING_MIN_LENGTH "0" \
-    --FASTQ "sam_to_fastq_out_R1.fastq.gz" \
+    --FASTQ "sam_to_fastq_07_out_R1.fastq.gz" \
     --INCLUDE_NON_PF_READS false \
     --INCLUDE_NON_PRIMARY_ALIGNMENTS false \
     --INPUT !{in_bam} \
@@ -148,7 +148,7 @@ process sam_to_fastq_07 {
     --READ2_TRIM "0" \
     --RE_REVERSE true \
     --RG_TAG "PU" \
-    --SECOND_END_FASTQ "sam_to_fastq_out_R2.fastq.gz"
+    --SECOND_END_FASTQ "sam_to_fastq_07_out_R2.fastq.gz"
     '''
     // Parameters requiring valid values
     //    --CLIPPING_ACTION 
@@ -175,16 +175,13 @@ process bwa_mem2_08 {
     path reference_0123
 
     output:
-    path 'bwa_mem2_out.sam', emit: sam
+    path 'bwa_mem2_08_out.sam', emit: sam
     
     shell:
     '''
-    ref_stem=`basename !{reference_sequence}`
-    echo "bwa_mem2_08: in_fastq !{in_fastq}, ref_stem $ref_stem"
-
     bwa-mem2 \
     mem \
-    -o bwa_mem2_out.sam \
+    -o bwa_mem2_08_out.sam \
     -t !{params.steps_08_bwa_mem2_threads} \
     !{reference_sequence} \
     !{in_fastq[0]} !{in_fastq[1]}
@@ -334,7 +331,7 @@ process sam_to_fastq_13 {
     path reference_sequence
 
     output:
-    path 'sam_to_fastq_out_R?.fastq.gz', emit: fastq
+    path 'sam_to_fastq_13_out_R?.fastq.gz', emit: fastq
 
     shell:
     '''
@@ -344,7 +341,7 @@ process sam_to_fastq_13 {
     --COMPRESSION_LEVEL 5 \
     --CREATE_INDEX false \
     --CREATE_MD5_FILE false \
-    --FASTQ "sam_to_fastq_out_R1.fastq.gz" \
+    --FASTQ "sam_to_fastq_13_out_R1.fastq.gz" \
     --INCLUDE_NON_PF_READS false \
     --INCLUDE_NON_PRIMARY_ALIGNMENTS false \
     --INPUT !{in_bam} \
@@ -359,7 +356,7 @@ process sam_to_fastq_13 {
     --RE_REVERSE true \
     --REFERENCE_SEQUENCE !{reference_sequence} \
     --RG_TAG "PU" \
-    --SECOND_END_FASTQ "sam_to_fastq_out_R2.fastq.gz" \
+    --SECOND_END_FASTQ "sam_to_fastq_13_out_R2.fastq.gz" \
     --USE_JDK_DEFLATER false \
     --USE_JDK_INFLATER false \
     --VALIDATION_STRINGENCY "STRICT" \
@@ -378,18 +375,86 @@ process sam_to_fastq_13 {
 }
 
 process cutadapt_14 {
-    container { ecr_prefix + params.steps_cutadapt_container }
-    cpus params.steps_cutadapt_cpus
-    memory params.steps_cutadapt_memory
+    container { ecr_prefix + params.steps_14_cutadapt_container }
+    cpus params.steps_14_cutadapt_cpus
+    memory params.steps_14_cutadapt_memory
 
     input:
     path in_bam
 
     output:
-    path 'cutadapt_out_R?.fastq.gz', emit: out_fastq
+    path 'cutadapt_out_R?.fastq.gz', emit: fastq
     
     shell:
     '''
+    cutadapt \
+    --error-rate="0.1" \
+    --times=1 \
+    --overlap=7 \
+    --match-read-wildcards \
+    --minimum-length=20 \
+    --maximum-length=0 \
+    --pair-filter="any" \
+    -a 21nt=CAAAACGCAATACTGTACTGG \
+    -g 11nt=ATGACTCGAAT \
+    --output cutadapt_out_R1.fastq.gz \
+    --paired-output cutadapt_out_R2.fastq.gz \
+    !{in_bam}
+
+    '''
+    // Unimplemented:            "front_adapters2": [
+    // Need correct values: -a, -g, --cut, --output, --paired-output, --match-read-wildcards
+    // --no-indels="false" \
+    // --no-trim="false" \
+    // --mask-adapter="false" \
+    // --discard-trimmed="false" \
+    // --discard-untrimmed="false" \
+
+    // --cut 11 \
+    // --cut -21 \
+
+}
+
+process bwa_mem2_15 {
+    container { ecr_prefix + params.steps_15_bwa_mem2_container }
+    cpus params.steps_15_bwa_mem2_cpus
+    memory params.steps_15_bwa_mem2_memory
+    publishDir publish_dir
+
+    input:
+    path in_fastq
+    path reference_sequence
+    path reference_index
+    path reference_bwt
+    path reference_ann
+    path reference_amb
+    path reference_pac
+    path reference_0123
+
+    output:
+    path 'bwa_mem2_15_out.sam', emit: sam
+    
+    shell:
+    '''
+    bwa-mem2 \
+    mem \
+    -w 100 \
+    -L 5 \
+    -W 10000 \
+    -E 1 \
+    -O 6 \
+    -M \
+    -A 1 \
+    -T 30 \
+    -k 19 \
+    -B 4 \
+    -t 16 \
+    -U 9 \
+    -d 100 \
+    -o bwa_mem2_15_out.sam \
+    -t !{params.steps_15_bwa_mem2_threads} \
+    !{reference_sequence} \
+    !{in_fastq[0]} !{in_fastq[1]}
     '''
 }
 
@@ -416,7 +481,8 @@ workflow {
     sort_bam_06(fastq_to_bam_04.out.bam)
     merge_bam_alignment_09(bwa_mem2_08.out.sam, sort_bam_06.out.bam, ref_ch, ref_idx_ch, ref_dict_ch) | group_reads_by_umi_10 | call_molecular_consensus_reads_11
     filter_consensus_reads_12(call_molecular_consensus_reads_11.out.bam, ref_ch)
-    sam_to_fastq_13(filter_consensus_reads_12.out.bam, ref_ch) | cutadapt_14 \
+    sam_to_fastq_13(filter_consensus_reads_12.out.bam, ref_ch) | cutadapt_14
+    bwa_mem2_15(cutadapt_14.out.fastq, ref_ch, ref_idx_ch, ref_idx_bwt, ref_ann, ref_amb, ref_pac, ref_0123)
 
 
     // merge_bam_alignment_09(bwa_mem2.out_sam, sort_bam.out_bam) | group_reads_by_umi_10 \

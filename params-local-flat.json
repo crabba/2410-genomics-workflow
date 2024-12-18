@@ -1,6 +1,6 @@
 {
-    "fastq_1": "H06HDADXX130110.1.ATCACGAT.20k_reads_1.fastq.gz",
-    "fastq_2": "H06HDADXX130110.1.ATCACGAT.20k_reads_2.fastq.gz",
+    "fastq_1": "GIAB_NIST_NA12878_HG001_HiSeq_300x__L002_R1_001.fastq.gz",
+    "fastq_2": "GIAB_NIST_NA12878_HG001_HiSeq_300x__L002_R2_001.fastq.gz",
     "omics_ecr_prefix": "426997564500.dkr.ecr.us-east-1.amazonaws.com/",
     "onOmics": false,
     "outputdir": "outt",
@@ -45,7 +45,7 @@
     "steps_13_sam_to_fastq_container": "broadinstitute/gatk:latest",
     "steps_13_sam_to_fastq_cpus": "2",
     "steps_13_sam_to_fastq_memory": "4 GB",
-    "steps_14_cutadapt_container": "cutadapt:latest",
+    "steps_14_cutadapt_container": "quay.io/biocontainers/cutadapt:1.16--py36_2",
     "steps_14_cutadapt_cpus": "2",
     "steps_14_cutadapt_memory": "4 GB"
 }
