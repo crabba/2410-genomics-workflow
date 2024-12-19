@@ -53,5 +53,8 @@
     "steps_15_bwa_mem2_threads": "8",
     "steps_16_sortsam_container": "broadinstitute/gatk:latest",
     "steps_16_sortsam_cpus": "8",
-    "steps_16_sortsam_memory": "24 GB"
+    "steps_16_sortsam_memory": "24 GB",
+    "steps_17_mutect2_container": "broadinstitute/gatk:latest",
+    "steps_17_mutect2_cpus": "8",
+    "steps_17_mutect2_memory": "24 GB"
 }

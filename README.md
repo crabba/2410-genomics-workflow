@@ -10,8 +10,19 @@ The workflow may be tested on a local instance (virtual machine), with the Nextf
 
 Usage
 ```
-nextflow run main.nf --fastq '/home/ec2-user/H06HDADXX130110.1.*_{1,2}.fastq.gz' -params-file params-local.json
+nextflow run main.nf --fastq '/home/ec2-user/H06HDADXX130110.1.*_{1,2}.fastq.gz' -params-file params-local-flat.json
 ```
+
+## Parameters file
+
+Nextflow accepts a JSON parameters file at the command line with the `-params-file` flag. While Nextflow can read a nested JSON file, AWS HealthOmics requires a flat (single level) JSON parameters file.  This repository contains a flat JSON file where each key has a unique name, including the step number.
+
+## Test Environment
+
+This workflow may be tested on any Linux machine with the following software installed:
+* Docker
+* Nextflow
+* Containers as listed in the parameters file
 
 ## Migration from Galaxy to Nextflow
 

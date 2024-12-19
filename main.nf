@@ -490,6 +490,70 @@ process sortsam_16 {
 
 }
 
+process mutect2_17 {
+    container { ecr_prefix + params.steps_17_mutect2_container }
+    cpus params.steps_17_mutect2_cpus
+    memory params.steps_17_mutect2_memory
+
+    input:
+    path in_bam
+    path reference_sequence
+    path reference_index
+    path reference_bwt
+    path reference_ann
+    path reference_amb
+    path reference_pac
+    path reference_0123
+    path reference_dict
+
+    output:
+    path 'mutect2_17_out.vcf.gz', emit: vcf
+
+    shell:
+    '''
+    java -jar /gatk/gatk.jar \
+    Mutect2 \
+    --input !{in_bam} \
+    --output mutect2_17_out.vcf.gz \
+    --reference !{reference_sequence}
+    '''
+    // Filed under Too Hard
+    //         "gvcf_lod_band_rpt": [
+    // 	    --kmer_size: null, \
+    //      --num-pruning-samples "1" \
+    // --active-probability-threshold "0.002" \
+    // --adaptive-pruning-initial-error-rate "0.001" \
+    // --allele-informative-reads-overlap-margin "2" \
+    // --allow-non-unique-kmers-in-ref "false" \
+    // --bam-writer-type "CALLED_HAPLOTYPES" \
+    // --disable-adaptive-pruning "false" \
+    // --disable-tool-default-annotations "false" \
+    // --dont-increase-kmer-sizes-for-cycles "false" \
+    // --dont-use-soft-clipped-bases "false" \
+    // --emit-ref-confidence "NONE" \
+    // --enable-all-annotations "false" \
+    // --force-active "false" \
+    // --force-call-filtered-alleles "false" \
+    // --independent-mates "false" \
+    // --max-mnp-distance "1" \
+    // --max-num-haplotypes-in-population "128" \
+    // --max-prob-propagation-distance "50" \
+    // --max-suspicious-reads-per-alignment-start "0" \
+    // --max-unpruned-variants "100" \
+    // --min-dangling-branch-length "4" \
+    // --min-pruning "2" \
+    // --minimum-allele-fraction "0.0" \
+    // --pair-hmm-gap-continuation-penalty "10" \
+    // --pair-hmm-implementation "FASTEST_AVAILABLE" \
+    // --pcr-indel-model "CONSERVATIVE" \
+    // --phred-scaled-global-read-mismapping-rate "45" \
+    // --pruning-lod-threshold "2.302585092994046" \
+    // --recover-all-dangling-branches "false" \
+    // --smith-waterman "JAVA" \
+
+
+}
+
 workflow {
     // def fastq_pairs_ch = Channel.fromFilePairs(params.fastq)
     def fastq_1_ch = Channel.fromPath(params.fastq_1)
@@ -515,7 +579,7 @@ workflow {
     filter_consensus_reads_12(call_molecular_consensus_reads_11.out.bam, ref_ch)
     sam_to_fastq_13(filter_consensus_reads_12.out.bam, ref_ch) | cutadapt_14
     bwa_mem2_15(cutadapt_14.out.fastq, ref_ch, ref_idx_ch, ref_idx_bwt, ref_ann, ref_amb, ref_pac, ref_0123) | sortsam_16
-
+    mutect2_17(sortsam_16.out.sam, ref_ch, ref_idx_ch, ref_idx_bwt, ref_ann, ref_amb, ref_pac, ref_0123, ref_dict_ch)
 
     // merge_bam_alignment_09(bwa_mem2.out_sam, sort_bam.out_bam) | group_reads_by_umi_10 \
     // | call_molecular_consensus_reads_11 | filter_consensus_reads_12 | sam_to_fastq_13 | cutadapt_14
