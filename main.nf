@@ -273,7 +273,7 @@ process call_molecular_consensus_reads_11 {
     --consensus-call-overlapping-bases="false" \
     --debug="false" \
     --input=!{in_bam} \
-    --min-reads=6 \
+    --min-reads=2 \
     --output=call_molecular_consensus_reads_out.bam \
     --output-per-base-tags="true"
     '''
@@ -458,6 +458,38 @@ process bwa_mem2_15 {
     '''
 }
 
+process sortsam_16 {
+    container { ecr_prefix + params.steps_16_sortsam_container }
+    cpus params.steps_16_sortsam_cpus
+    memory params.steps_16_sortsam_memory
+
+    input:
+    path in_bam
+
+    output:
+    path 'sortsam_16_out.sam', emit: sam
+
+    shell:
+    '''
+    java -jar /gatk/gatk.jar \
+    SortSam \
+    --COMPRESSION_LEVEL 5 \
+    --CREATE_INDEX false \
+    --CREATE_MD5_FILE false \
+    --INPUT !{in_bam} \
+    --MAX_RECORDS_IN_RAM 2000000 \
+    --OUTPUT sortsam_16_out.sam \
+    --QUIET false \
+    --SORT_ORDER "coordinate" \
+    --USE_JDK_DEFLATER false \
+    --USE_JDK_INFLATER false \
+    --VALIDATION_STRINGENCY "LENIENT" \
+    --VERBOSITY "INFO"
+    '''
+    //         "GA4GH_CLIENT_SECRETS": "client_secrets.json",
+
+}
+
 workflow {
     // def fastq_pairs_ch = Channel.fromFilePairs(params.fastq)
     def fastq_1_ch = Channel.fromPath(params.fastq_1)
@@ -482,7 +514,7 @@ workflow {
     merge_bam_alignment_09(bwa_mem2_08.out.sam, sort_bam_06.out.bam, ref_ch, ref_idx_ch, ref_dict_ch) | group_reads_by_umi_10 | call_molecular_consensus_reads_11
     filter_consensus_reads_12(call_molecular_consensus_reads_11.out.bam, ref_ch)
     sam_to_fastq_13(filter_consensus_reads_12.out.bam, ref_ch) | cutadapt_14
-    bwa_mem2_15(cutadapt_14.out.fastq, ref_ch, ref_idx_ch, ref_idx_bwt, ref_ann, ref_amb, ref_pac, ref_0123)
+    bwa_mem2_15(cutadapt_14.out.fastq, ref_ch, ref_idx_ch, ref_idx_bwt, ref_ann, ref_amb, ref_pac, ref_0123) | sortsam_16
 
 
     // merge_bam_alignment_09(bwa_mem2.out_sam, sort_bam.out_bam) | group_reads_by_umi_10 \
