@@ -8,7 +8,7 @@ params.limits = ''
 ecr_prefix = params.onOmics ? params.omics_ecr_prefix : ""
 publish_dir = params.onOmics ? "/mnt/workflow/pubdir" : "."
 
-process fastqc_03 {
+process step03_fastqc {
     container { ecr_prefix + params.steps_03_fastqc_container }
     cpus params.steps_03_fastqc_cpus
     memory params.steps_03_fastqc_memory
@@ -40,7 +40,7 @@ process fastqc_03 {
 
 }
 
-process fastq_to_bam_04 {
+process step04_fastq_to_bam {
     container { ecr_prefix + params.steps_04_fastq_to_bam_container }
     cpus params.steps_04_fastq_to_bam_cpus
     memory params.steps_04_fastq_to_bam_memory
@@ -52,7 +52,7 @@ process fastq_to_bam_04 {
     path fastq_2
 
     output:
-    path 'fastq_to_bam_out.bam', emit: bam
+    path 'step04_out_fastq_to_bam.bam', emit: bam
 
     shell:
     '''
@@ -62,7 +62,7 @@ process fastq_to_bam_04 {
     --description="sample-description" \
     --input=!{fastq_1} !{fastq_2} \
     --library=b \
-    --output="fastq_to_bam_out.bam" \
+    --output="step04_out_fastq_to_bam.bam" \
     --platform="sample-platform" \
     --platform-model="sample-platform-model" \
     --platform-unit="sample-platform-unit" \
@@ -78,7 +78,7 @@ process fastq_to_bam_04 {
     //     --input=!{reads[0]} !{reads[1]} \
 }
 
-process fastqc_05 {
+process step05_fastqc {
     container { ecr_prefix + params.steps_05_fastqc_container }
     cpus params.steps_05_fastqc_cpus
     memory params.steps_05_fastqc_memory
@@ -96,7 +96,7 @@ process fastqc_05 {
     '''
 }
 
-process sort_bam_06 {
+process step06_sort_bam {
     container { ecr_prefix + params.steps_06_sort_bam_container }
     cpus params.steps_06_sort_bam_cpus
     memory params.steps_06_sort_bam_memory
@@ -106,7 +106,7 @@ process sort_bam_06 {
     path in_bam
 
     output:
-    path 'sort_bam_out.bam', emit: bam
+    path 'step06_out_sort_bam.bam', emit: bam
 
     shell:
     '''
@@ -114,12 +114,12 @@ process sort_bam_06 {
     SortBam \
     --input=!{in_bam} \
     --max-records-in-ram=111111 \
-    --output="sort_bam_out.bam" \
+    --output="step06_out_sort_bam.bam" \
     --sort-order="Queryname"
     '''
 }
 
-process sam_to_fastq_07 {
+process step07_sam_to_fastq {
     container { ecr_prefix + params.steps_07_sam_to_fastq_container }
     cpus params.steps_07_sam_to_fastq_cpus
     memory params.steps_07_sam_to_fastq_memory
@@ -129,14 +129,14 @@ process sam_to_fastq_07 {
     path in_bam
 
     output:
-    path 'sam_to_fastq_07_out_R?.fastq.gz', emit: fastq
+    path 'step07_out_sam_to_fastq_R?.fastq.gz', emit: fastq
 
     shell:
     '''
     java -jar /gatk/gatk.jar \
     SamToFastq \
     --CLIPPING_MIN_LENGTH "0" \
-    --FASTQ "sam_to_fastq_07_out_R1.fastq.gz" \
+    --FASTQ "step07_out_sam_to_fastq_R1.fastq.gz" \
     --INCLUDE_NON_PF_READS false \
     --INCLUDE_NON_PRIMARY_ALIGNMENTS false \
     --INPUT !{in_bam} \
@@ -148,7 +148,7 @@ process sam_to_fastq_07 {
     --READ2_TRIM "0" \
     --RE_REVERSE true \
     --RG_TAG "PU" \
-    --SECOND_END_FASTQ "sam_to_fastq_07_out_R2.fastq.gz"
+    --SECOND_END_FASTQ "step07_out_sam_to_fastq_R2.fastq.gz"
     '''
     // Parameters requiring valid values
     //    --CLIPPING_ACTION 
@@ -158,7 +158,7 @@ process sam_to_fastq_07 {
 
 }
 
-process bwa_mem2_08 {
+process step08_bwa_mem2 {
     container { ecr_prefix + params.steps_08_bwa_mem2_container }
     cpus params.steps_08_bwa_mem2_cpus
     memory params.steps_08_bwa_mem2_memory
@@ -175,13 +175,13 @@ process bwa_mem2_08 {
     path reference_0123
 
     output:
-    path 'bwa_mem2_08_out.sam', emit: sam
+    path 'step08_out_bwa_mem2.sam', emit: sam
     
     shell:
     '''
     bwa-mem2 \
     mem \
-    -o bwa_mem2_08_out.sam \
+    -o step08_out_bwa_mem2.sam \
     -t !{params.steps_08_bwa_mem2_threads} \
     !{reference_sequence} \
     !{in_fastq[0]} !{in_fastq[1]}
@@ -192,7 +192,7 @@ process bwa_mem2_08 {
     // !{reference_sequence}
 }
 
-process merge_bam_alignment_09 {
+process step09_merge_bam_alignment {
     container { ecr_prefix + params.steps_09_merge_bam_alignment_container }
     cpus params.steps_09_merge_bam_alignment_cpus
     memory params.steps_09_merge_bam_alignment_memory
@@ -206,7 +206,7 @@ process merge_bam_alignment_09 {
     path reference_dict
 
     output:
-    path 'merge_bam_alignment_out.bam', emit: bam
+    path 'step09_out_merge_bam_alignment.bam', emit: bam
     
     shell:
     '''
@@ -218,13 +218,13 @@ process merge_bam_alignment_09 {
     --PRIMARY_ALIGNMENT_STRATEGY !{params.steps_09_merge_bam_alignment_primary_alignment_strategy} \
     --SORT_ORDER !{params.steps_09_merge_bam_alignment_sort_order} \
     --ALIGNED_BAM !{aligned_bam} \
-    --OUTPUT merge_bam_alignment_out.bam \
+    --OUTPUT step09_out_merge_bam_alignment.bam \
     --REFERENCE_SEQUENCE !{reference_sequence} \
     --UNMAPPED_BAM !{unmapped_bam}
     '''
 }
 
-process group_reads_by_umi_10 {
+process step10_group_reads_by_umi {
     container { ecr_prefix + params.steps_10_group_reads_by_umi_container }
     cpus params.steps_10_group_reads_by_umi_cpus
     memory params.steps_10_group_reads_by_umi_memory
@@ -234,7 +234,7 @@ process group_reads_by_umi_10 {
     path in_bam
 
     output:
-    path 'group_reads_by_umi_out.bam', emit: bam
+    path 'step10_out_group_reads_by_umi.bam', emit: bam
     
     shell:
     '''
@@ -246,7 +246,7 @@ process group_reads_by_umi_10 {
     --include-supplementary="false" \
     --input=!{in_bam} \
     --mark-duplicates="false" \
-    --output=group_reads_by_umi_out.bam \
+    --output=step10_out_group_reads_by_umi.bam \
     --strategy="adjacency"
     '''
     // --family_size_histogram_on="false" \
@@ -254,7 +254,7 @@ process group_reads_by_umi_10 {
     // --raw-tag="" \
 }
 
-process call_molecular_consensus_reads_11 {
+process step11_call_molecular_consensus_reads_ {
     container { ecr_prefix + params.steps_11_call_molecular_consensus_reads_container }
     cpus params.steps_11_call_molecular_consensus_reads_cpus
     memory params.steps_11_call_molecular_consensus_reads_memory
@@ -264,7 +264,7 @@ process call_molecular_consensus_reads_11 {
     path in_bam
 
     output:
-    path 'call_molecular_consensus_reads_out.bam', emit: bam
+    path 'step11_out_call_molecular_consensus_reads.bam', emit: bam
     
     shell:
     '''
@@ -274,7 +274,7 @@ process call_molecular_consensus_reads_11 {
     --debug="false" \
     --input=!{in_bam} \
     --min-reads=2 \
-    --output=call_molecular_consensus_reads_out.bam \
+    --output=step11_out_call_molecular_consensus_reads.bam \
     --output-per-base-tags="true"
     '''
     // "rejects_output_on": "false" - Could this be '-r PathToBam, --rejects=PathToBam'?
@@ -289,7 +289,7 @@ process call_molecular_consensus_reads_11 {
     // --tag=null
 }
 
-process filter_consensus_reads_12 {
+process step12_filter_consensus_reads {
     container { ecr_prefix + params.steps_12_filter_consensus_reads_container }
     cpus params.steps_12_filter_consensus_reads_cpus
     memory params.steps_12_filter_consensus_reads_memory
@@ -299,7 +299,7 @@ process filter_consensus_reads_12 {
     path reference_sequence
 
     output:
-    path 'filter_consensus_reads_out.bam', emit: bam
+    path 'step_out_filter_consensus_reads.bam', emit: bam
     
     shell:
     '''
@@ -310,7 +310,7 @@ process filter_consensus_reads_12 {
     --max-read-error-rate="1.0" \
     --min-base-quality=10 \
     --min-reads=6 \
-    --output=filter_consensus_reads_out.bam \
+    --output=step_out_filter_consensus_reads.bam \
     --ref=!{reference_sequence} \
     --require-single-strand-agreement="false" \
     --reverse-per-base-tags="false"
@@ -321,7 +321,7 @@ process filter_consensus_reads_12 {
     // --sort-order=null
 }
 
-process sam_to_fastq_13 {
+process step13_sam_to_fastq {
     container { ecr_prefix + params.steps_13_sam_to_fastq_container }
     cpus params.steps_13_sam_to_fastq_cpus
     memory params.steps_13_sam_to_fastq_memory
@@ -331,7 +331,7 @@ process sam_to_fastq_13 {
     path reference_sequence
 
     output:
-    path 'sam_to_fastq_13_out_R?.fastq.gz', emit: fastq
+    path 'step13_out_sam_to_fastq_R?.fastq.gz', emit: fastq
 
     shell:
     '''
@@ -341,7 +341,7 @@ process sam_to_fastq_13 {
     --COMPRESSION_LEVEL 5 \
     --CREATE_INDEX false \
     --CREATE_MD5_FILE false \
-    --FASTQ "sam_to_fastq_13_out_R1.fastq.gz" \
+    --FASTQ "step13_out_sam_to_fastq_R1.fastq.gz" \
     --INCLUDE_NON_PF_READS false \
     --INCLUDE_NON_PRIMARY_ALIGNMENTS false \
     --INPUT !{in_bam} \
@@ -356,7 +356,7 @@ process sam_to_fastq_13 {
     --RE_REVERSE true \
     --REFERENCE_SEQUENCE !{reference_sequence} \
     --RG_TAG "PU" \
-    --SECOND_END_FASTQ "sam_to_fastq_13_out_R2.fastq.gz" \
+    --SECOND_END_FASTQ "step13_out_sam_to_fastq_R2.fastq.gz" \
     --USE_JDK_DEFLATER false \
     --USE_JDK_INFLATER false \
     --VALIDATION_STRINGENCY "STRICT" \
@@ -374,7 +374,7 @@ process sam_to_fastq_13 {
 
 }
 
-process cutadapt_14 {
+process step14_cutadapt {
     container { ecr_prefix + params.steps_14_cutadapt_container }
     cpus params.steps_14_cutadapt_cpus
     memory params.steps_14_cutadapt_memory
@@ -383,7 +383,7 @@ process cutadapt_14 {
     path in_bam
 
     output:
-    path 'cutadapt_out_R?.fastq.gz', emit: fastq
+    path 'step14_cutadapt_out_R?.fastq.gz', emit: fastq
     
     shell:
     '''
@@ -397,8 +397,8 @@ process cutadapt_14 {
     --pair-filter="any" \
     -a 21nt=CAAAACGCAATACTGTACTGG \
     -g 11nt=ATGACTCGAAT \
-    --output cutadapt_out_R1.fastq.gz \
-    --paired-output cutadapt_out_R2.fastq.gz \
+    --output step14_cutadapt_out_R1.fastq.gz \
+    --paired-output step14_cutadapt_out_R2.fastq.gz \
     !{in_bam}
 
     '''
@@ -415,7 +415,7 @@ process cutadapt_14 {
 
 }
 
-process bwa_mem2_15 {
+process step15_bwa_mem2 {
     container { ecr_prefix + params.steps_15_bwa_mem2_container }
     cpus params.steps_15_bwa_mem2_cpus
     memory params.steps_15_bwa_mem2_memory
@@ -432,7 +432,7 @@ process bwa_mem2_15 {
     path reference_0123
 
     output:
-    path 'bwa_mem2_15_out.sam', emit: sam
+    path 'step15_out_bwa_mem2.sam', emit: sam
     
     shell:
     '''
@@ -451,14 +451,14 @@ process bwa_mem2_15 {
     -t 16 \
     -U 9 \
     -d 100 \
-    -o bwa_mem2_15_out.sam \
+    -o step15_out_bwa_mem2.sam \
     -t !{params.steps_15_bwa_mem2_threads} \
     !{reference_sequence} \
     !{in_fastq[0]} !{in_fastq[1]}
     '''
 }
 
-process sortsam_16 {
+process step16_sortsam {
     container { ecr_prefix + params.steps_16_sortsam_container }
     cpus params.steps_16_sortsam_cpus
     memory params.steps_16_sortsam_memory
@@ -467,30 +467,49 @@ process sortsam_16 {
     path in_bam
 
     output:
-    path 'sortsam_16_out.sam', emit: sam
+    path 'step16_out_sortsam.bam', emit: bam
 
     shell:
     '''
-    java -jar /gatk/gatk.jar \
-    SortSam \
+    java -jar /gatk/gatk.jar SortSam \
     --COMPRESSION_LEVEL 5 \
     --CREATE_INDEX false \
     --CREATE_MD5_FILE false \
     --INPUT !{in_bam} \
     --MAX_RECORDS_IN_RAM 2000000 \
-    --OUTPUT sortsam_16_out.sam \
+    --OUTPUT step16_intermed_sortsam.sam \
     --QUIET false \
     --SORT_ORDER "coordinate" \
     --USE_JDK_DEFLATER false \
     --USE_JDK_INFLATER false \
     --VALIDATION_STRINGENCY "LENIENT" \
     --VERBOSITY "INFO"
-    '''
-    //         "GA4GH_CLIENT_SECRETS": "client_secrets.json",
 
+    samtools addreplacerg \
+    -r '@RG\tID:samplename\tSM:samplename' \
+    step16_intermed_sortsam.sam \
+    -o step16_out_sortsam.sam
+
+    samtools sort \
+    -@ !{params.steps_16_sortsam_cpus} \
+    -o step16_out_sortsam.bam \
+    step16_out_sortsam.sam
+
+    samtools index \
+    step16_out_sortsam.bam
+    '''
+    // mutect2 without addreplacerg gives 'java.lang.IllegalArgumentException: samples cannot be empty'
+    // Probably missing RG insertion in a previous step
+    // https://www.biostars.org/p/424817/
+
+    // mutect2_17 without samtools index gives: 
+    // 'A USER ERROR has occurred: Traversal by intervals was requested but some input files are not indexed.'
+    // 'Please index all input files'
+
+    //         "GA4GH_CLIENT_SECRETS": "client_secrets.json",
 }
 
-process mutect2_17 {
+process step17_mutect2 {
     container { ecr_prefix + params.steps_17_mutect2_container }
     cpus params.steps_17_mutect2_cpus
     memory params.steps_17_mutect2_memory
@@ -507,14 +526,14 @@ process mutect2_17 {
     path reference_dict
 
     output:
-    path 'mutect2_17_out.vcf.gz', emit: vcf
+    path 'step17_out_mutect2.vcf.gz', emit: vcf
 
     shell:
     '''
-    java -jar /gatk/gatk.jar \
+    java -Xmx16384M -jar /gatk/gatk.jar \
     Mutect2 \
     --input !{in_bam} \
-    --output mutect2_17_out.vcf.gz \
+    --output step17_out_mutect2.vcf.gz \
     --reference !{reference_sequence}
     '''
     // Filed under Too Hard
@@ -550,8 +569,6 @@ process mutect2_17 {
     // --pruning-lod-threshold "2.302585092994046" \
     // --recover-all-dangling-branches "false" \
     // --smith-waterman "JAVA" \
-
-
 }
 
 workflow {
@@ -571,18 +588,13 @@ workflow {
     def ref_pac     = Channel.fromPath(ref_prefix + 'Homo_sapiens_assembly38.fasta.pac')
     def ref_0123    = Channel.fromPath(ref_prefix + 'Homo_sapiens_assembly38.fasta.0123')
 
-    fastqc_03(fastq_1_ch, fastq_2_ch)
-    fastq_to_bam_04(fastq_1_ch, fastq_2_ch) | sam_to_fastq_07
-    bwa_mem2_08(sam_to_fastq_07.out.fastq, ref_ch, ref_idx_ch, ref_idx_bwt, ref_ann, ref_amb, ref_pac, ref_0123)
-    sort_bam_06(fastq_to_bam_04.out.bam)
-    merge_bam_alignment_09(bwa_mem2_08.out.sam, sort_bam_06.out.bam, ref_ch, ref_idx_ch, ref_dict_ch) | group_reads_by_umi_10 | call_molecular_consensus_reads_11
-    filter_consensus_reads_12(call_molecular_consensus_reads_11.out.bam, ref_ch)
-    sam_to_fastq_13(filter_consensus_reads_12.out.bam, ref_ch) | cutadapt_14
-    bwa_mem2_15(cutadapt_14.out.fastq, ref_ch, ref_idx_ch, ref_idx_bwt, ref_ann, ref_amb, ref_pac, ref_0123) | sortsam_16
-    mutect2_17(sortsam_16.out.sam, ref_ch, ref_idx_ch, ref_idx_bwt, ref_ann, ref_amb, ref_pac, ref_0123, ref_dict_ch)
-
-    // merge_bam_alignment_09(bwa_mem2.out_sam, sort_bam.out_bam) | group_reads_by_umi_10 \
-    // | call_molecular_consensus_reads_11 | filter_consensus_reads_12 | sam_to_fastq_13 | cutadapt_14
-    // | bwa_mem2 | sort_sam
-    // mutect2(sort_sam.out_bam, intervals_ch)
+    step03_fastqc(fastq_1_ch, fastq_2_ch)
+    step04_fastq_to_bam(fastq_1_ch, fastq_2_ch) | step07_sam_to_fastq
+    step08_bwa_mem2(step07_sam_to_fastq.out.fastq, ref_ch, ref_idx_ch, ref_idx_bwt, ref_ann, ref_amb, ref_pac, ref_0123)
+    step06_sort_bam(step04_fastq_to_bam.out.bam)
+    step09_merge_bam_alignment(step08_bwa_mem2.out.sam, step06_sort_bam.out.bam, ref_ch, ref_idx_ch, ref_dict_ch) | step10_group_reads_by_umi | step11_call_molecular_consensus_reads
+    step12_filter_consensus_reads(step11_call_molecular_consensus_reads.out.bam, ref_ch)
+    step13_sam_to_fastq(step12_filter_consensus_reads.out.bam, ref_ch) | step14_cutadapt
+    step15_bwa_mem2(step14_cutadapt.out.fastq, ref_ch, ref_idx_ch, ref_idx_bwt, ref_ann, ref_amb, ref_pac, ref_0123) | step16_sortsam
+    step17_mutect2(step16_sortsam.out.bam, ref_ch, ref_idx_ch, ref_idx_bwt, ref_ann, ref_amb, ref_pac, ref_0123, ref_dict_ch)
 }
