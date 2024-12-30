@@ -1,0 +1,9 @@
+{
+    "cacheBehavior": "CACHE_ALWAYS",
+    "cacheS3Location": "${OMICS_CACHE_URI}",
+    "description": "Run cache for Mutect2 workflow",
+    "name": "Mutect2",
+    "tags": {
+        "project": "${PROJECT_NAME}"
+    }
+}

@@ -212,11 +212,11 @@ process step09_merge_bam_alignment {
     '''
     java -jar /gatk/gatk.jar \
     MergeBamAlignment \
-    --ADD_MATE_CIGAR !{params.steps_09_merge_bam_alignment_add_mate_cigar} \
-    --ALIGNED_READS_ONLY !{params.steps_09_merge_bam_alignment_aligned_reads_only} \
-    --ALIGNER_PROPER_PAIR_FLAGS !{params.steps_09_merge_bam_alignment_aligner_proper_pair_flags} \
-    --PRIMARY_ALIGNMENT_STRATEGY !{params.steps_09_merge_bam_alignment_primary_alignment_strategy} \
-    --SORT_ORDER !{params.steps_09_merge_bam_alignment_sort_order} \
+    --ADD_MATE_CIGAR true \
+    --ALIGNED_READS_ONLY false \
+    --ALIGNER_PROPER_PAIR_FLAGS false \
+    --PRIMARY_ALIGNMENT_STRATEGY BestMapq \
+    --SORT_ORDER coordinate \
     --ALIGNED_BAM !{aligned_bam} \
     --OUTPUT step09_out_merge_bam_alignment.bam \
     --REFERENCE_SEQUENCE !{reference_sequence} \
@@ -254,7 +254,7 @@ process step10_group_reads_by_umi {
     // --raw-tag="" \
 }
 
-process step11_call_molecular_consensus_reads_ {
+process step11_call_molecular_consensus_reads {
     container { ecr_prefix + params.steps_11_call_molecular_consensus_reads_container }
     cpus params.steps_11_call_molecular_consensus_reads_cpus
     memory params.steps_11_call_molecular_consensus_reads_memory
@@ -299,7 +299,7 @@ process step12_filter_consensus_reads {
     path reference_sequence
 
     output:
-    path 'step_out_filter_consensus_reads.bam', emit: bam
+    path 'step12_out_filter_consensus_reads.bam', emit: bam
     
     shell:
     '''
@@ -309,8 +309,8 @@ process step12_filter_consensus_reads {
     --max-base-error-rate="1.0" \
     --max-read-error-rate="1.0" \
     --min-base-quality=10 \
-    --min-reads=6 \
-    --output=step_out_filter_consensus_reads.bam \
+    --min-reads=1 \
+    --output=step12_out_filter_consensus_reads.bam \
     --ref=!{reference_sequence} \
     --require-single-strand-agreement="false" \
     --reverse-per-base-tags="false"
@@ -319,6 +319,7 @@ process step12_filter_consensus_reads {
     // --max-no-call-fraction=null \
     // --min-mean-base-quality=null \
     // --sort-order=null
+    // --min-reads=6 - set to 1 for testing with smaller input files
 }
 
 process step13_sam_to_fastq {
@@ -468,9 +469,14 @@ process step16_sortsam {
 
     output:
     path 'step16_out_sortsam.bam', emit: bam
+    path 'step16_out_sortsam.bam.bai', emit: bai
 
     shell:
     '''
+    echo "Before SortSam"
+    pwd
+    ls -l
+    
     java -jar /gatk/gatk.jar SortSam \
     --COMPRESSION_LEVEL 5 \
     --CREATE_INDEX false \
@@ -485,18 +491,31 @@ process step16_sortsam {
     --VALIDATION_STRINGENCY "LENIENT" \
     --VERBOSITY "INFO"
 
+    echo "Before samtools addreplacerg"
+    ls -l
+
     samtools addreplacerg \
     -r '@RG\tID:samplename\tSM:samplename' \
     step16_intermed_sortsam.sam \
     -o step16_out_sortsam.sam
+
+    echo "Before samtools sort"
+    ls -l
 
     samtools sort \
     -@ !{params.steps_16_sortsam_cpus} \
     -o step16_out_sortsam.bam \
     step16_out_sortsam.sam
 
+    echo "Before samtools index"
+    ls -l
+
     samtools index \
     step16_out_sortsam.bam
+
+    echo "After samtools index"
+    ls -l
+
     '''
     // mutect2 without addreplacerg gives 'java.lang.IllegalArgumentException: samples cannot be empty'
     // Probably missing RG insertion in a previous step
@@ -516,6 +535,7 @@ process step17_mutect2 {
 
     input:
     path in_bam
+    path in_bai
     path reference_sequence
     path reference_index
     path reference_bwt
@@ -530,6 +550,10 @@ process step17_mutect2 {
 
     shell:
     '''
+    echo "Before Mutect2"
+    pwd
+    ls -l
+
     java -Xmx16384M -jar /gatk/gatk.jar \
     Mutect2 \
     --input !{in_bam} \
@@ -588,7 +612,8 @@ workflow {
     def ref_pac     = Channel.fromPath(ref_prefix + 'Homo_sapiens_assembly38.fasta.pac')
     def ref_0123    = Channel.fromPath(ref_prefix + 'Homo_sapiens_assembly38.fasta.0123')
 
-    step03_fastqc(fastq_1_ch, fastq_2_ch)
+    // Put this back in - only omitted to speed up cached test runs (this step does not cache on AHO)
+    // step03_fastqc(fastq_1_ch, fastq_2_ch)
     step04_fastq_to_bam(fastq_1_ch, fastq_2_ch) | step07_sam_to_fastq
     step08_bwa_mem2(step07_sam_to_fastq.out.fastq, ref_ch, ref_idx_ch, ref_idx_bwt, ref_ann, ref_amb, ref_pac, ref_0123)
     step06_sort_bam(step04_fastq_to_bam.out.bam)
@@ -596,5 +621,5 @@ workflow {
     step12_filter_consensus_reads(step11_call_molecular_consensus_reads.out.bam, ref_ch)
     step13_sam_to_fastq(step12_filter_consensus_reads.out.bam, ref_ch) | step14_cutadapt
     step15_bwa_mem2(step14_cutadapt.out.fastq, ref_ch, ref_idx_ch, ref_idx_bwt, ref_ann, ref_amb, ref_pac, ref_0123) | step16_sortsam
-    step17_mutect2(step16_sortsam.out.bam, ref_ch, ref_idx_ch, ref_idx_bwt, ref_ann, ref_amb, ref_pac, ref_0123, ref_dict_ch)
+    step17_mutect2(step16_sortsam.out.bam, step16_sortsam.out.bai, ref_ch, ref_idx_ch, ref_idx_bwt, ref_ann, ref_amb, ref_pac, ref_0123, ref_dict_ch)
 }

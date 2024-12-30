@@ -7,4 +7,6 @@ work/
 *.bam
 Homo_sapiens_assembly38.dict
 Homo_sapiens_assembly38.fasta*
+aws-omics-*-output*.json
+aws-omics-*-input*.json
 *.zip
