@@ -10,7 +10,7 @@ The workflow may be tested on a local instance (virtual machine), with the Nextf
 
 Usage
 ```
-nextflow run main.nf --fastq '/home/ec2-user/H06HDADXX130110.1.*_{1,2}.fastq.gz' -params-file params-local-flat.json
+nextflow run main.nf --fastq '/home/ec2-user/H06HDADXX130110.1.*_{1,2}.fastq.gz' -params-file params.json
 ```
 
 ## Parameters file
