@@ -10,7 +10,7 @@ The workflow may be tested on a local instance (virtual machine), with the Nextf
 
 Usage
 ```
-nextflow run main.nf --fastq '/home/ec2-user/H06HDADXX130110.1.*_{1,2}.fastq.gz' -params-file params.json
+nextflow run main.nf --fastq 'H06HDADXX130110.1.*_{1,2}.fastq.gz' -params-file params.json
 ```
 
 ## Parameters file
@@ -169,7 +169,7 @@ The report file (HTML) and trace file (text) contain details on each step of the
 **Storage**
 Nextflow can natively read from and write to S3. A file may be defined locally as `foo_r1.fastq.gz` or on S3 as `s3://mybucket/mypath/foo_r1.fastq.gz` with no change in behaviour. 
 
-Intermediate files are written on a shared high performance file system in a directory specific to the process, and will not be persisted when the run is completed. To save required files to the output S3 location, define the `publishDir` directive with the names of all files to be saved.  See [Writing workflows in Nextflow](https://docs.aws.amazon.com/omics/latest/dev/workflow-languages.html#workflow-languages-nextflow) in the HealthOmics documentation. 
+Intermediate files are written on a shared high performance file system in a directory specific to the process, and will not be persisted when the run is completed. To save required files to the output S3 location, define the `publishDir` directive with the value `/mnt/workflow/pubdir`.  See [Writing workflows in Nextflow](https://docs.aws.amazon.com/omics/latest/dev/workflow-languages.html#workflow-languages-nextflow) in the HealthOmics documentation. 
 
 **Compute**
 
@@ -264,6 +264,10 @@ export OMICS_PARAMS_INPUTS=$(cat params-healthomics.json)
 envsubst < aws-omics-start-run-template.json >  $START_RUN_INPUT_JSON
 aws omics start-run --cli-input-json file://${START_RUN_INPUT_JSON} > $START_RUN_OUTPUT_JSON
 ```
+
+**Workflow analytics**
+
+Detailed metrics are recorded from each run, including CPU and memory utilization.  After the run is complete, the Omics Run Analyzer from [AWS HealthOmics Tools](https://github.com/awslabs/amazon-omics-tools) will generate a CSV report showing the allocated resources, percent utilization of each, and estimted cost of each task.
 
 **Security**
 HealthOmics, as with all AWS managed services, runs in an AWS-owned account and requires permissions to access resources in any other AWS account. In this example, HealthOmics requires permissions to:
