@@ -64,7 +64,7 @@ Examine the Galaxy workflow diagram and its accompanying `.ga` file. Tasks have 
 Within the step, the relevant tool is found in the `tool_id` and `tool_version` lines:
 
 ```
-"tool_id": "kcctools.ohsu.edu/repos/onwuzu/fg_fastq_to_bam/fg_FastqToBam/2.2.1+galaxy1",
+"tool_id": "mytools.me.edu/repos/me/fg_fastq_to_bam/fg_FastqToBam/2.2.1+galaxy1",
 "tool_version": "2.2.1+galaxy1",
 ```
 
